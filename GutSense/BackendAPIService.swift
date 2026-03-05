@@ -34,7 +34,7 @@ struct UserSourceDTO: Encodable {
 
 // MARK: - Response DTOs
 
-struct AgentResultDTO: Codable {
+@preconcurrency struct AgentResultDTO: Codable, @unchecked Sendable {
     let agent_type: String
     let fodmap_tiers: [IngredientFODMAPDTO]
     let ibs_trigger_probability: Double
@@ -50,7 +50,7 @@ struct AgentResultDTO: Codable {
     let processing_latency_ms: Int
 }
 
-struct SynthesisResultDTO: Codable {
+@preconcurrency struct SynthesisResultDTO: Codable, @unchecked Sendable {
     let reconciled_tiers: [IngredientFODMAPDTO]
     let final_ibs_probability: Double
     let confidence_band: Double
@@ -60,7 +60,7 @@ struct SynthesisResultDTO: Codable {
     let safety_flags: [SafetyFlagDTO]
 }
 
-struct IngredientFODMAPDTO: Codable {
+struct IngredientFODMAPDTO: Codable, @unchecked Sendable {
     let ingredient: String
     let tier: String
     let fructan_g: Double?
@@ -72,7 +72,7 @@ struct IngredientFODMAPDTO: Codable {
     let source: String
 }
 
-struct EnzymeRecommendationDTO: Codable {
+struct EnzymeRecommendationDTO: Codable, @unchecked Sendable {
     let name: String
     let brand: String
     let targets: String
@@ -81,21 +81,21 @@ struct EnzymeRecommendationDTO: Codable {
     let notes: String
 }
 
-struct CitationDTO: Codable {
+struct CitationDTO: Codable, @unchecked Sendable {
     let title: String
     let source: String
     let confidence_tier: String
     let url: String?
 }
 
-struct BioavailabilityChangeDTO: Codable {
+struct BioavailabilityChangeDTO: Codable, @unchecked Sendable {
     let nutrient: String
     let raw_percent: Double
     let cooked_percent: Double
     let note: String
 }
 
-struct SafetyFlagDTO: Codable {
+struct SafetyFlagDTO: Codable, @unchecked Sendable {
     let message: String
     let severity: String
 }
@@ -123,7 +123,7 @@ enum BackendAPIError: LocalizedError {
 // MARK: - DTO → Domain
 
 extension AgentResultDTO {
-    func toDomain(agentType: AgentType) -> AgentResult {
+    nonisolated func toDomain(agentType: AgentType) -> AgentResult {
         AgentResult(
             agentType: agentType,
             fodmapTiers: fodmap_tiers.map { $0.toDomain() },
@@ -145,7 +145,7 @@ extension AgentResultDTO {
 }
 
 extension SynthesisResultDTO {
-    func toDomain() -> SynthesisResult {
+    nonisolated func toDomain() -> SynthesisResult {
         SynthesisResult(
             reconciledTiers: reconciled_tiers.map { $0.toDomain() },
             finalIBSProbability: final_ibs_probability,
@@ -160,7 +160,7 @@ extension SynthesisResultDTO {
 }
 
 extension IngredientFODMAPDTO {
-    func toDomain() -> IngredientFODMAP {
+    nonisolated func toDomain() -> IngredientFODMAP {
         IngredientFODMAP(
             ingredient: ingredient,
             tier: FODMAPTier(rawValue: tier.capitalized) ?? .moderate,
@@ -172,14 +172,14 @@ extension IngredientFODMAPDTO {
 }
 
 extension EnzymeRecommendationDTO {
-    func toDomain() -> EnzymeRecommendation {
+    nonisolated func toDomain() -> EnzymeRecommendation {
         EnzymeRecommendation(name: name, brand: brand, targets: targets,
                              dose: dose, temperatureWarning: temperature_warning, notes: notes)
     }
 }
 
 extension CitationDTO {
-    func toDomain() -> Citation {
+    nonisolated func toDomain() -> Citation {
         Citation(title: title, source: source,
                  confidenceTier: ConfidenceTier(rawValue: confidence_tier.capitalized
                      .replacingOccurrences(of: "-", with: " ")) ?? .peerReviewed,
@@ -188,14 +188,14 @@ extension CitationDTO {
 }
 
 extension BioavailabilityChangeDTO {
-    func toDomain() -> BioavailabilityChange {
+    nonisolated func toDomain() -> BioavailabilityChange {
         BioavailabilityChange(nutrient: nutrient, rawPercent: raw_percent,
                               cookedPercent: cooked_percent, note: note)
     }
 }
 
 extension SafetyFlagDTO {
-    func toDomain() -> SafetyFlag {
+    nonisolated func toDomain() -> SafetyFlag {
         let sev: FlagSeverity = severity == "critical" ? .critical
                               : severity == "warning"  ? .warning : .info
         return SafetyFlag(message: message, severity: sev)
@@ -308,7 +308,7 @@ extension KeychainService {
 // MARK: - Domain → DTO (for saving to SwiftData)
 
 extension AgentResultDTO {
-    static func from(_ result: AgentResult) -> AgentResultDTO {
+    nonisolated static func from(_ result: AgentResult) -> AgentResultDTO {
         AgentResultDTO(
             agent_type: result.agentType.rawValue,
             fodmap_tiers: result.fodmapTiers.map { IngredientFODMAPDTO.from($0) },
@@ -328,7 +328,7 @@ extension AgentResultDTO {
 }
 
 extension SynthesisResultDTO {
-    static func from(_ result: SynthesisResult) -> SynthesisResultDTO {
+    nonisolated static func from(_ result: SynthesisResult) -> SynthesisResultDTO {
         SynthesisResultDTO(
             reconciled_tiers: result.reconciledTiers.map { IngredientFODMAPDTO.from($0) },
             final_ibs_probability: result.finalIBSProbability,
@@ -342,7 +342,7 @@ extension SynthesisResultDTO {
 }
 
 extension IngredientFODMAPDTO {
-    static func from(_ item: IngredientFODMAP) -> IngredientFODMAPDTO {
+    nonisolated static func from(_ item: IngredientFODMAP) -> IngredientFODMAPDTO {
         IngredientFODMAPDTO(
             ingredient: item.ingredient,
             tier: item.tier.rawValue.lowercased(),
@@ -358,7 +358,7 @@ extension IngredientFODMAPDTO {
 }
 
 extension EnzymeRecommendationDTO {
-    static func from(_ enzyme: EnzymeRecommendation) -> EnzymeRecommendationDTO {
+    nonisolated static func from(_ enzyme: EnzymeRecommendation) -> EnzymeRecommendationDTO {
         EnzymeRecommendationDTO(
             name: enzyme.name,
             brand: enzyme.brand,
@@ -371,7 +371,7 @@ extension EnzymeRecommendationDTO {
 }
 
 extension CitationDTO {
-    static func from(_ citation: Citation) -> CitationDTO {
+    nonisolated static func from(_ citation: Citation) -> CitationDTO {
         CitationDTO(
             title: citation.title,
             source: citation.source,
@@ -382,7 +382,7 @@ extension CitationDTO {
 }
 
 extension BioavailabilityChangeDTO {
-    static func from(_ change: BioavailabilityChange) -> BioavailabilityChangeDTO {
+    nonisolated static func from(_ change: BioavailabilityChange) -> BioavailabilityChangeDTO {
         BioavailabilityChangeDTO(
             nutrient: change.nutrient,
             raw_percent: change.rawPercent,
@@ -393,7 +393,7 @@ extension BioavailabilityChangeDTO {
 }
 
 extension SafetyFlagDTO {
-    static func from(_ flag: SafetyFlag) -> SafetyFlagDTO {
+    nonisolated static func from(_ flag: SafetyFlag) -> SafetyFlagDTO {
         let severity: String = {
             switch flag.severity {
             case .critical: return "critical"

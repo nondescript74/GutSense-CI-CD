@@ -82,7 +82,8 @@ struct QueryInputView: View {
                     appleResult: vm.appleResult,
                     claudeResult: vm.claudeResult,
                     geminiResult: vm.geminiResult,
-                    servingInfo: vm.servingViewModel.summaryLabel
+                    servingInfo: vm.servingViewModel.summaryLabel,
+                    appleService: AppleFoundationModelService.shared
                 )
                 .navigationBarBackButtonHidden(vm.phase.isRunning)
                 // Live-update as results arrive

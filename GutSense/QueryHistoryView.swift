@@ -53,7 +53,8 @@ struct QueryHistoryView: View {
                         appleResult: apple,
                         claudeResult: claude,
                         geminiResult: gemini,
-                        servingInfo: record.servingInfo
+                        servingInfo: record.servingInfo,
+                        appleService: AppleFoundationModelService.shared
                     )
                     .navigationTitle("Saved Analysis")
                     .navigationBarTitleDisplayMode(.inline)

@@ -320,89 +320,226 @@ struct AgentPaneHeader: View {
 
 // MARK: - Apple Agent Pane
 
+// GutSense — AppleAgentPane.swift
+// Drop-in replacement for the Apple pane in ThreePaneResultsView
+// Shows device capability card when Apple Intelligence is unavailable
+
+import SwiftUI
+
+// MARK: - Apple Agent Pane
+
 struct AppleAgentPane: View {
     let result: AgentResult
+    @ObservedObject var appleService: AppleFoundationModelService
 
     var body: some View {
-        VStack(spacing: 0) {
-            AgentPaneHeader(
-                title: "Apple",
-                icon: "applelogo",
-                color: .primary,
-                latencyMs: result.isLoading ? nil : result.processingLatencyMs,
-                isLoading: result.isLoading
-            )
-
-            if result.isLoading {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Image(systemName: "apple.logo")
+                    .font(.subheadline.weight(.semibold))
+                Text("Apple")
+                    .font(.subheadline.weight(.bold))
                 Spacer()
-                ProgressView("Analyzing on-device…")
-                    .font(.caption)
-                Spacer()
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 10) {
-
-                        // FODMAP Tiers
-                        Text("FODMAP Analysis")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(.secondary)
-                        ForEach(result.fodmapTiers) { item in
-                            FODMAPTierBadge(item: item)
-                        }
-
-                        Divider()
-
-                        // IBS Probability
-                        ProbabilityGauge(
-                            probability: result.ibsTriggerProbability,
-                            confidenceInterval: result.confidenceInterval + result.confidenceTier.uncertaintyBoost,
-                            label: "IBS Trigger Risk"
-                        )
-
-                        if result.personalizedRiskDelta > 0 {
-                            Text("↑ \(Int(result.personalizedRiskDelta * 100))% above your baseline")
-                                .font(.caption2)
-                                .foregroundColor(.red)
-                        }
-
-                        // Fructan/GOS Summary
-                        if result.totalFructanG > 0 || result.totalGOSG > 0 {
-                            Divider()
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("Fructans & GOS")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundColor(.secondary)
-                                if result.totalFructanG > 0 {
-                                    Text("Fructans: \(result.totalFructanG, specifier: "%.2f")g (threshold 0.20g)")
-                                        .font(.caption2)
-                                        .foregroundColor(result.totalFructanG > 0.20 ? .red : .green)
-                                }
-                                if result.totalGOSG > 0 {
-                                    Text("GOS: \(result.totalGOSG, specifier: "%.2f")g (threshold 0.30g)")
-                                        .font(.caption2)
-                                        .foregroundColor(result.totalGOSG > 0.30 ? .red : .green)
-                                }
-                            }
-                        }
-
-                        // Enzymes
-                        if !result.enzymeRecommendations.isEmpty {
-                            Divider()
-                            Text("Enzyme Options")
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(.secondary)
-                            ForEach(result.enzymeRecommendations) { enzyme in
-                                EnzymeCard(enzyme: enzyme)
-                            }
-                        }
-                    }
-                    .padding(12)
+                if result.isLoading {
+                    ProgressView().scaleEffect(0.7)
+                } else if appleService.isAvailable {
+                    Text("\(result.processingLatencyMs)ms")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+
+            Divider()
+
+            // Content
+            if result.isLoading {
+                loadingView
+            } else if appleService.isAvailable {
+                resultView
+            } else {
+                unavailableView
             }
         }
         .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.2)))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.gray.opacity(0.15)))
+    }
+
+    // MARK: - Unavailable View
+
+    private var unavailableView: some View {
+        VStack(spacing: 16) {
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.12))
+                    .frame(width: 56, height: 56)
+                Image(systemName: "brain")
+                    .font(.title2)
+                    .foregroundColor(.orange)
+            }
+
+            // Message
+            VStack(spacing: 6) {
+                Text(unavailabilityTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .multilineTextAlignment(.center)
+
+                Text(unavailabilityDetail)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // What it means for this analysis
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.caption)
+                Text("Claude & Gemini are providing full analysis")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.green.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            // Action hint if just disabled (not unsupported device)
+            if appleService.availability == .appleIntelligenceDisabled {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label("Open Settings", systemImage: "gear")
+                        .font(.caption.weight(.medium))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.accentColor.opacity(0.1))
+                        .foregroundColor(.accentColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Loading View
+
+    private var loadingView: some View {
+        VStack(spacing: 8) {
+            ProgressView()
+            Text("Analyzing on-device...")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(32)
+    }
+
+    // MARK: - Result View (normal path — Apple Intelligence available)
+
+    private var resultView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if !result.fodmapTiers.isEmpty {
+                Text("FODMAP Analysis")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 10)
+
+                ForEach(result.fodmapTiers) { ingredient in
+                    IngredientRow(ingredient: ingredient)
+                        .padding(.horizontal, 12)
+                }
+            }
+
+            Divider().padding(.horizontal, 12)
+
+            // IBS Risk
+            VStack(alignment: .leading, spacing: 4) {
+                Text("IBS Trigger Risk")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+
+                HStack {
+                    ProgressView(value: result.ibsTriggerProbability)
+                        .tint(riskColor(result.ibsTriggerProbability))
+                    Text("\(Int(result.ibsTriggerProbability * 100))%")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundColor(riskColor(result.ibsTriggerProbability))
+                }
+
+                Text("±\(Int(result.confidenceInterval * 100))% CI")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var unavailabilityTitle: String {
+        switch appleService.availability {
+        case .deviceNotSupported:
+            return "Apple Intelligence not supported"
+        case .appleIntelligenceDisabled:
+            return "Apple Intelligence is off"
+        default:
+            return "Apple Intelligence unavailable"
+        }
+    }
+
+    private var unavailabilityDetail: String {
+        switch appleService.availability {
+        case .deviceNotSupported:
+            return "Requires iPhone 15 Pro, iPhone 16, or M-series iPad. Your device doesn't support on-device AI."
+        case .appleIntelligenceDisabled:
+            return "Enable Apple Intelligence in Settings → Apple Intelligence & Siri to use on-device analysis."
+        default:
+            return "The on-device model isn't ready yet. It may still be downloading."
+        }
+    }
+
+    private func riskColor(_ probability: Double) -> Color {
+        switch probability {
+        case ..<0.30: return .green
+        case ..<0.60: return .orange
+        default:      return .red
+        }
+    }
+}
+
+// MARK: - Ingredient Row
+
+private struct IngredientRow: View {
+    let ingredient: IngredientFODMAP
+
+    var body: some View {
+        HStack {
+            Image(systemName: ingredient.tier.icon)
+                .foregroundColor(ingredient.tier.color)
+                .font(.caption)
+                .frame(width: 16)
+            Text(ingredient.ingredient)
+                .font(.caption)
+            Spacer()
+            Text(ingredient.tier.rawValue)
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(ingredient.tier.color.opacity(0.15))
+                .foregroundColor(ingredient.tier.color)
+                .clipShape(Capsule())
+        }
     }
 }
 
@@ -652,6 +789,7 @@ struct ThreePaneResultsView: View {
     let claudeResult: AgentResult
     let geminiResult: SynthesisResult
     var servingInfo: String? = nil
+    @ObservedObject var appleService: AppleFoundationModelService
 
     var body: some View {
         VStack(spacing: 0) {
@@ -694,7 +832,7 @@ struct ThreePaneResultsView: View {
                     // Bottom row: Apple | Claude (supporting details)
                     GeometryReader { geo in
                         HStack(alignment: .top, spacing: 10) {
-                            AppleAgentPane(result: appleResult)
+                            AppleAgentPane(result: appleResult, appleService: appleService)
                                 .frame(width: (geo.size.width - 10) / 2)
 
                             ClaudeAgentPane(result: claudeResult)
@@ -720,7 +858,8 @@ struct ThreePaneResultsView: View {
             appleResult: .appleMock,
             claudeResult: .claudeMock,
             geminiResult: .geminiMock,
-            servingInfo: "1× serving (100%)"
+            servingInfo: "1× serving (100%)",
+            appleService: AppleFoundationModelService.shared
         )
     }
 }

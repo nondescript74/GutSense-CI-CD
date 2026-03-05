@@ -12,7 +12,7 @@
 //  Created by Zahirudeen Premji on 3/5/26.
 //
 
-import Foundation
+@preconcurrency import Foundation
 import SwiftData
 import SwiftUI
 import CryptoKit
@@ -53,45 +53,71 @@ final class FoodQueryRecord: Identifiable, Hashable {
         
         // Encode full results as JSON
         let encoder = JSONEncoder()
-        if let appleData = try? encoder.encode(AgentResultDTO.from(apple)),
-           let appleStr = String(data: appleData, encoding: .utf8) {
-            self.appleResultJSON = appleStr
-        }
-        if let claudeData = try? encoder.encode(AgentResultDTO.from(claude)),
-           let claudeStr = String(data: claudeData, encoding: .utf8) {
-            self.claudeResultJSON = claudeStr
-        }
-        if let geminiData = try? encoder.encode(SynthesisResultDTO.from(gemini)),
-           let geminiStr = String(data: geminiData, encoding: .utf8) {
-            self.geminiResultJSON = geminiStr
+        let appleDTO = AgentResultDTO.from(apple)
+        let claudeDTO = AgentResultDTO.from(claude)
+        let geminiDTO = SynthesisResultDTO.from(gemini)
+        
+        MainActor.assumeIsolated {
+            do {
+                let appleData = try encoder.encode(appleDTO)
+                self.appleResultJSON = String(data: appleData, encoding: .utf8)
+            } catch {}
+            
+            do {
+                let claudeData = try encoder.encode(claudeDTO)
+                self.claudeResultJSON = String(data: claudeData, encoding: .utf8)
+            } catch {}
+            
+            do {
+                let geminiData = try encoder.encode(geminiDTO)
+                self.geminiResultJSON = String(data: geminiData, encoding: .utf8)
+            } catch {}
         }
     }
     
     func loadAppleResult() -> AgentResult? {
         guard let json = appleResultJSON,
-              let data = json.data(using: .utf8),
-              let dto = try? JSONDecoder().decode(AgentResultDTO.self, from: data) else {
+              let data = json.data(using: .utf8) else {
             return nil
         }
-        return dto.toDomain(agentType: .apple)
+        return MainActor.assumeIsolated {
+            do {
+                let dto = try JSONDecoder().decode(AgentResultDTO.self, from: data)
+                return dto.toDomain(agentType: .apple)
+            } catch {
+                return nil
+            }
+        }
     }
     
     func loadClaudeResult() -> AgentResult? {
         guard let json = claudeResultJSON,
-              let data = json.data(using: .utf8),
-              let dto = try? JSONDecoder().decode(AgentResultDTO.self, from: data) else {
+              let data = json.data(using: .utf8) else {
             return nil
         }
-        return dto.toDomain(agentType: .claude)
+        return MainActor.assumeIsolated {
+            do {
+                let dto = try JSONDecoder().decode(AgentResultDTO.self, from: data)
+                return dto.toDomain(agentType: .claude)
+            } catch {
+                return nil
+            }
+        }
     }
     
     func loadGeminiResult() -> SynthesisResult? {
         guard let json = geminiResultJSON,
-              let data = json.data(using: .utf8),
-              let dto = try? JSONDecoder().decode(SynthesisResultDTO.self, from: data) else {
+              let data = json.data(using: .utf8) else {
             return nil
         }
-        return dto.toDomain()
+        return MainActor.assumeIsolated {
+            do {
+                let dto = try JSONDecoder().decode(SynthesisResultDTO.self, from: data)
+                return dto.toDomain()
+            } catch {
+                return nil
+            }
+        }
     }
 }
 
