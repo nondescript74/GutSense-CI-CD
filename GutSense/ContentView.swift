@@ -5,62 +5,44 @@
 //  Created by Zahirudeen Premji on 3/5/26.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
+
+// MARK: - Content View (Tab Navigation)
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @EnvironmentObject var credentialsStore: CredentialsStore
+    @Query private var profile: [UserProfileRecord]
+    @Query private var sources: [UserSourceRecord]
+    @StateObject private var queryViewModel = QueryViewModel()
+
+    var resolvedProfile: UserProfile {
+        profile.first?.toModel() ?? .default
+    }
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        TabView {
+            Tab("Analyze", systemImage: "flask.fill") {
+                QueryInputView(
+                    viewModel: queryViewModel,
+                    userProfile: resolvedProfile,
+                    userSources: sources.map { $0.toModel() }
+                )
             }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
+
+            Tab("History", systemImage: "clock.fill") {
+                QueryHistoryView()
+                    .environmentObject(queryViewModel)
             }
-        } detail: {
-            Text("Select an item")
-        }
-    }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
+            Tab("Sources", systemImage: "books.vertical.fill") {
+                SourceLibraryView()
+            }
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+            Tab("Settings", systemImage: "gearshape.fill") {
+                SettingsView()
             }
         }
+        .tint(.accentColor)
     }
-}
-
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
