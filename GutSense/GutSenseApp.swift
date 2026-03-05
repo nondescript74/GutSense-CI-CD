@@ -15,7 +15,7 @@ struct GutSenseApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            LaunchScreenView()
                 .environmentObject(credentialsStore)
         }
         .modelContainer(for: [

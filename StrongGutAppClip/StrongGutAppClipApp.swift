@@ -14,7 +14,7 @@ struct StrongGutAppClipApp: App {
     
     var body: some Scene {
         WindowGroup {
-            StrongGutClipView()
+            LaunchScreenView()
                 .environmentObject(credentialsStore)
         }
     }
