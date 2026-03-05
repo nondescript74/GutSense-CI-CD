@@ -151,6 +151,8 @@ enum ServiceIdentifier: String, CaseIterable, Identifiable {
 final class KeychainService {
     static let shared = KeychainService()
     private let keychainServiceName = "com.gutsense.credentials"
+    // Access group disabled - will be enabled after adding Keychain Sharing capability via Xcode UI
+    private let keychainAccessGroup: String? = nil
 
     private init() {}
 
@@ -161,13 +163,21 @@ final class KeychainService {
             throw KeychainError.invalidData
         }
 
-        let query: [CFString: Any] = [
+        var query: [CFString: Any] = [
             kSecClass:           kSecClassGenericPassword,
             kSecAttrService:     keychainServiceName,
             kSecAttrAccount:     key,
             kSecValueData:       data,
-            kSecAttrAccessible:  kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            // Use AfterFirstUnlock (not ThisDeviceOnly) to persist across app reinstalls during development
+            kSecAttrAccessible:  kSecAttrAccessibleAfterFirstUnlock
         ]
+        
+        // Add access group for sharing between main app and App Clip (if configured)
+        #if !targetEnvironment(simulator)
+        if let accessGroup = keychainAccessGroup {
+            query[kSecAttrAccessGroup] = accessGroup
+        }
+        #endif
 
         // Try to delete existing first (upsert pattern)
         SecItemDelete(query as CFDictionary)
@@ -181,13 +191,20 @@ final class KeychainService {
     // MARK: Read
 
     func read(for key: String) throws -> String {
-        let query: [CFString: Any] = [
+        var query: [CFString: Any] = [
             kSecClass:            kSecClassGenericPassword,
             kSecAttrService:      keychainServiceName,
             kSecAttrAccount:      key,
             kSecReturnData:       true,
             kSecMatchLimit:       kSecMatchLimitOne
         ]
+        
+        // Add access group for sharing between main app and App Clip (if configured)
+        #if !targetEnvironment(simulator)
+        if let accessGroup = keychainAccessGroup {
+            query[kSecAttrAccessGroup] = accessGroup
+        }
+        #endif
 
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -208,11 +225,18 @@ final class KeychainService {
     // MARK: Delete
 
     func delete(for key: String) throws {
-        let query: [CFString: Any] = [
+        var query: [CFString: Any] = [
             kSecClass:        kSecClassGenericPassword,
             kSecAttrService:  keychainServiceName,
             kSecAttrAccount:  key
         ]
+        
+        // Add access group for sharing between main app and App Clip (if configured)
+        #if !targetEnvironment(simulator)
+        if let accessGroup = keychainAccessGroup {
+            query[kSecAttrAccessGroup] = accessGroup
+        }
+        #endif
 
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
@@ -319,13 +343,34 @@ final class CredentialsStore: ObservableObject {
 
     // MARK: Quick accessors for backend
 
-    var anthropicAPIKey: String? { try? keychain.read(for: "anthropic.api_key") }
-    var geminiAPIKey: String?    { try? keychain.read(for: "gemini.api_key") }
-    var backendURL: String?      { try? keychain.read(for: "gutsense.backend_url") }
-    var backendSecret: String?   { try? keychain.read(for: "gutsense.api_secret") }
+    var anthropicAPIKey: String? { 
+        try? keychain.read(for: "anthropic.api_key") 
+    }
+    var geminiAPIKey: String? { 
+        try? keychain.read(for: "gemini.api_key") 
+    }
+    var backendURL: String? {
+        get { try? keychain.read(for: "gutsense.backend_url") }
+        set { 
+            if let value = newValue {
+                try? keychain.save(value, for: "gutsense.backend_url")
+                savedKeys.insert("gutsense.backend_url")
+            }
+        }
+    }
+    var backendSecret: String? { 
+        try? keychain.read(for: "gutsense.api_secret") 
+    }
 
     var isReadyForAnalysis: Bool {
         anthropicAPIKey != nil && geminiAPIKey != nil && backendURL != nil
+    }
+    
+    // MARK: Development Helper - Save credentials directly
+    
+    func saveCredential(_ value: String, for key: String) throws {
+        try keychain.save(value, for: key)
+        savedKeys.insert(key)
     }
 
     // MARK: Custom Services

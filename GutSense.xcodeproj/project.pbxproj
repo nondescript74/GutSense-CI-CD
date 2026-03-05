@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		F8F1BAF22F59E354009C2630 /* XCODE_SETUP.md in Resources */ = {isa = PBXBuildFile; fileRef = F8F1BAF12F59E354009C2630 /* XCODE_SETUP.md */; };
+		F8F1BB442F5A20A7009C2630 /* StrongGutAppClip.app in Embed App Clips */ = {isa = PBXBuildFile; fileRef = F8F1BB202F5A20A5009C2630 /* StrongGutAppClip.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,18 +26,83 @@
 			remoteGlobalIDString = F8F1A4822F59DDA7009C2630;
 			remoteInfo = GutSense;
 		};
+		F8F1BB312F5A20A7009C2630 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F8F1A47B2F59DDA7009C2630 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F8F1BB1F2F5A20A5009C2630;
+			remoteInfo = StrongGutAppClip;
+		};
+		F8F1BB3B2F5A20A7009C2630 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F8F1A47B2F59DDA7009C2630 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F8F1BB1F2F5A20A5009C2630;
+			remoteInfo = StrongGutAppClip;
+		};
+		F8F1BB422F5A20A7009C2630 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F8F1A47B2F59DDA7009C2630 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F8F1BB1F2F5A20A5009C2630;
+			remoteInfo = StrongGutAppClip;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F8F1BB492F5A20A7009C2630 /* Embed App Clips */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/AppClips";
+			dstSubfolderSpec = 16;
+			files = (
+				F8F1BB442F5A20A7009C2630 /* StrongGutAppClip.app in Embed App Clips */,
+			);
+			name = "Embed App Clips";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		F8F1A4832F59DDA7009C2630 /* GutSense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GutSense.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8F1A4922F59DDA9009C2630 /* GutSenseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GutSenseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8F1A49C2F59DDA9009C2630 /* GutSenseUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GutSenseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8F1BAF12F59E354009C2630 /* XCODE_SETUP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = XCODE_SETUP.md; sourceTree = "<group>"; };
+		F8F1BB202F5A20A5009C2630 /* StrongGutAppClip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StrongGutAppClip.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F8F1BB302F5A20A7009C2630 /* StrongGutAppClipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StrongGutAppClipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F8F1BB3A2F5A20A7009C2630 /* StrongGutAppClipUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StrongGutAppClipUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F8F1BB452F5A20A7009C2630 /* Exceptions for "StrongGutAppClip" folder in "StrongGutAppClip" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F8F1BB1F2F5A20A5009C2630 /* StrongGutAppClip */;
+		};
+		F8F1BB572F5A22B5009C2630 /* Exceptions for "GutSense" folder in "StrongGutAppClip" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				BackendAPIService.swift,
+				DomainModels.swift,
+				FoundationModelAvailability.swift,
+				KeychainService.swift,
+				Models.swift,
+				QueryInputMode.swift,
+				ServingAmountView.swift,
+				ThreePaneResultsView.swift,
+			);
+			target = F8F1BB1F2F5A20A5009C2630 /* StrongGutAppClip */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F8F1A4852F59DDA7009C2630 /* GutSense */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F8F1BB572F5A22B5009C2630 /* Exceptions for "GutSense" folder in "StrongGutAppClip" target */,
+			);
 			path = GutSense;
 			sourceTree = "<group>";
 		};
@@ -53,6 +119,24 @@
 		F8F1A4AF2F59E29B009C2630 /* Docs */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Docs;
+			sourceTree = "<group>";
+		};
+		F8F1BB212F5A20A5009C2630 /* StrongGutAppClip */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F8F1BB452F5A20A7009C2630 /* Exceptions for "StrongGutAppClip" folder in "StrongGutAppClip" target */,
+			);
+			path = StrongGutAppClip;
+			sourceTree = "<group>";
+		};
+		F8F1BB332F5A20A7009C2630 /* StrongGutAppClipTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = StrongGutAppClipTests;
+			sourceTree = "<group>";
+		};
+		F8F1BB3D2F5A20A7009C2630 /* StrongGutAppClipUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = StrongGutAppClipUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -79,6 +163,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F8F1BB1D2F5A20A5009C2630 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F8F1BB2D2F5A20A7009C2630 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F8F1BB372F5A20A7009C2630 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -89,6 +194,9 @@
 				F8F1A4852F59DDA7009C2630 /* GutSense */,
 				F8F1A4952F59DDA9009C2630 /* GutSenseTests */,
 				F8F1A49F2F59DDA9009C2630 /* GutSenseUITests */,
+				F8F1BB212F5A20A5009C2630 /* StrongGutAppClip */,
+				F8F1BB332F5A20A7009C2630 /* StrongGutAppClipTests */,
+				F8F1BB3D2F5A20A7009C2630 /* StrongGutAppClipUITests */,
 				F8F1A4842F59DDA7009C2630 /* Products */,
 				F8F1BAF12F59E354009C2630 /* XCODE_SETUP.md */,
 			);
@@ -100,6 +208,9 @@
 				F8F1A4832F59DDA7009C2630 /* GutSense.app */,
 				F8F1A4922F59DDA9009C2630 /* GutSenseTests.xctest */,
 				F8F1A49C2F59DDA9009C2630 /* GutSenseUITests.xctest */,
+				F8F1BB202F5A20A5009C2630 /* StrongGutAppClip.app */,
+				F8F1BB302F5A20A7009C2630 /* StrongGutAppClipTests.xctest */,
+				F8F1BB3A2F5A20A7009C2630 /* StrongGutAppClipUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -114,10 +225,12 @@
 				F8F1A47F2F59DDA7009C2630 /* Sources */,
 				F8F1A4802F59DDA7009C2630 /* Frameworks */,
 				F8F1A4812F59DDA7009C2630 /* Resources */,
+				F8F1BB492F5A20A7009C2630 /* Embed App Clips */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F8F1BB432F5A20A7009C2630 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F8F1A4852F59DDA7009C2630 /* GutSense */,
@@ -176,6 +289,74 @@
 			productReference = F8F1A49C2F59DDA9009C2630 /* GutSenseUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		F8F1BB1F2F5A20A5009C2630 /* StrongGutAppClip */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F8F1BB462F5A20A7009C2630 /* Build configuration list for PBXNativeTarget "StrongGutAppClip" */;
+			buildPhases = (
+				F8F1BB1C2F5A20A5009C2630 /* Sources */,
+				F8F1BB1D2F5A20A5009C2630 /* Frameworks */,
+				F8F1BB1E2F5A20A5009C2630 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F8F1BB212F5A20A5009C2630 /* StrongGutAppClip */,
+			);
+			name = StrongGutAppClip;
+			packageProductDependencies = (
+			);
+			productName = StrongGutAppClip;
+			productReference = F8F1BB202F5A20A5009C2630 /* StrongGutAppClip.app */;
+			productType = "com.apple.product-type.application.on-demand-install-capable";
+		};
+		F8F1BB2F2F5A20A7009C2630 /* StrongGutAppClipTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F8F1BB4A2F5A20A7009C2630 /* Build configuration list for PBXNativeTarget "StrongGutAppClipTests" */;
+			buildPhases = (
+				F8F1BB2C2F5A20A7009C2630 /* Sources */,
+				F8F1BB2D2F5A20A7009C2630 /* Frameworks */,
+				F8F1BB2E2F5A20A7009C2630 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F8F1BB322F5A20A7009C2630 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F8F1BB332F5A20A7009C2630 /* StrongGutAppClipTests */,
+			);
+			name = StrongGutAppClipTests;
+			packageProductDependencies = (
+			);
+			productName = StrongGutAppClipTests;
+			productReference = F8F1BB302F5A20A7009C2630 /* StrongGutAppClipTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F8F1BB392F5A20A7009C2630 /* StrongGutAppClipUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F8F1BB4D2F5A20A7009C2630 /* Build configuration list for PBXNativeTarget "StrongGutAppClipUITests" */;
+			buildPhases = (
+				F8F1BB362F5A20A7009C2630 /* Sources */,
+				F8F1BB372F5A20A7009C2630 /* Frameworks */,
+				F8F1BB382F5A20A7009C2630 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F8F1BB3C2F5A20A7009C2630 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F8F1BB3D2F5A20A7009C2630 /* StrongGutAppClipUITests */,
+			);
+			name = StrongGutAppClipUITests;
+			packageProductDependencies = (
+			);
+			productName = StrongGutAppClipUITests;
+			productReference = F8F1BB3A2F5A20A7009C2630 /* StrongGutAppClipUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -197,6 +378,17 @@
 						CreatedOnToolsVersion = 26.3;
 						TestTargetID = F8F1A4822F59DDA7009C2630;
 					};
+					F8F1BB1F2F5A20A5009C2630 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					F8F1BB2F2F5A20A7009C2630 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = F8F1BB1F2F5A20A5009C2630;
+					};
+					F8F1BB392F5A20A7009C2630 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = F8F1BB1F2F5A20A5009C2630;
+					};
 				};
 			};
 			buildConfigurationList = F8F1A47E2F59DDA7009C2630 /* Build configuration list for PBXProject "GutSense" */;
@@ -216,6 +408,9 @@
 				F8F1A4822F59DDA7009C2630 /* GutSense */,
 				F8F1A4912F59DDA9009C2630 /* GutSenseTests */,
 				F8F1A49B2F59DDA9009C2630 /* GutSenseUITests */,
+				F8F1BB1F2F5A20A5009C2630 /* StrongGutAppClip */,
+				F8F1BB2F2F5A20A7009C2630 /* StrongGutAppClipTests */,
+				F8F1BB392F5A20A7009C2630 /* StrongGutAppClipUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -237,6 +432,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F8F1A49A2F59DDA9009C2630 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F8F1BB1E2F5A20A5009C2630 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F8F1BB2E2F5A20A7009C2630 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F8F1BB382F5A20A7009C2630 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -267,6 +483,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F8F1BB1C2F5A20A5009C2630 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F8F1BB2C2F5A20A7009C2630 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F8F1BB362F5A20A7009C2630 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -279,6 +516,21 @@
 			isa = PBXTargetDependency;
 			target = F8F1A4822F59DDA7009C2630 /* GutSense */;
 			targetProxy = F8F1A49D2F59DDA9009C2630 /* PBXContainerItemProxy */;
+		};
+		F8F1BB322F5A20A7009C2630 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F8F1BB1F2F5A20A5009C2630 /* StrongGutAppClip */;
+			targetProxy = F8F1BB312F5A20A7009C2630 /* PBXContainerItemProxy */;
+		};
+		F8F1BB3C2F5A20A7009C2630 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F8F1BB1F2F5A20A5009C2630 /* StrongGutAppClip */;
+			targetProxy = F8F1BB3B2F5A20A7009C2630 /* PBXContainerItemProxy */;
+		};
+		F8F1BB432F5A20A7009C2630 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F8F1BB1F2F5A20A5009C2630 /* StrongGutAppClip */;
+			targetProxy = F8F1BB422F5A20A7009C2630 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -405,15 +657,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = GutSense/GutSense.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = YKHW2TJ32G;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = StrongGut;
+				INFOPLIST_KEY_CFBundleDisplayName = "Strong Gut";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -453,15 +706,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = GutSense/GutSense.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = YKHW2TJ32G;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = StrongGut;
+				INFOPLIST_KEY_CFBundleDisplayName = "Strong Gut";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -597,6 +851,181 @@
 			};
 			name = Release;
 		};
+		F8F1BB472F5A20A7009C2630 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = StrongGutAppClip/StrongGutAppClip.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = YKHW2TJ32G;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StrongGutAppClip/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Strong Gut";
+				INFOPLIST_KEY_NSCameraUsageDescription = "We need camera access to scan barcodes on food products for FODMAP analysis";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need photo library access to analyze food images for FODMAP content";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.headydiscy.isg.Clip;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F8F1BB482F5A20A7009C2630 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = StrongGutAppClip/StrongGutAppClip.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = YKHW2TJ32G;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StrongGutAppClip/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Strong Gut";
+				INFOPLIST_KEY_NSCameraUsageDescription = "We need camera access to scan barcodes on food products for FODMAP analysis";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need photo library access to analyze food images for FODMAP content";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.headydiscy.isg.Clip;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F8F1BB4B2F5A20A7009C2630 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YKHW2TJ32G;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.headydiscy.isg.StrongGutAppClipTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StrongGutAppClip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StrongGutAppClip";
+			};
+			name = Debug;
+		};
+		F8F1BB4C2F5A20A7009C2630 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YKHW2TJ32G;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.headydiscy.isg.StrongGutAppClipTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StrongGutAppClip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StrongGutAppClip";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F8F1BB4E2F5A20A7009C2630 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YKHW2TJ32G;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.headydiscy.isg.StrongGutAppClipUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = StrongGutAppClip;
+			};
+			name = Debug;
+		};
+		F8F1BB4F2F5A20A7009C2630 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YKHW2TJ32G;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.headydiscy.isg.StrongGutAppClipUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = StrongGutAppClip;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -632,6 +1061,33 @@
 			buildConfigurations = (
 				F8F1A4AD2F59DDA9009C2630 /* Debug */,
 				F8F1A4AE2F59DDA9009C2630 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F8F1BB462F5A20A7009C2630 /* Build configuration list for PBXNativeTarget "StrongGutAppClip" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F8F1BB472F5A20A7009C2630 /* Debug */,
+				F8F1BB482F5A20A7009C2630 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F8F1BB4A2F5A20A7009C2630 /* Build configuration list for PBXNativeTarget "StrongGutAppClipTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F8F1BB4B2F5A20A7009C2630 /* Debug */,
+				F8F1BB4C2F5A20A7009C2630 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F8F1BB4D2F5A20A7009C2630 /* Build configuration list for PBXNativeTarget "StrongGutAppClipUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F8F1BB4E2F5A20A7009C2630 /* Debug */,
+				F8F1BB4F2F5A20A7009C2630 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
