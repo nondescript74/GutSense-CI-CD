@@ -3,6 +3,7 @@
 
 import Foundation
 import Combine
+import UIKit
 
 // MARK: - Request DTOs
 
@@ -14,6 +15,8 @@ struct AnalysisRequestDTO: Encodable {
     let serving_description: String?
     let serving_fraction: Double?
     let serving_amount_g: Double?
+    let image_base64: String?
+    let image_mime_type: String?
 }
 
 struct UserProfileDTO: Encodable {
@@ -226,9 +229,10 @@ final class BackendAPIService: ObservableObject {
 
     func analyzeClaude(query: String, profile: UserProfile,
                        sources: [UserSource] = [],
-                       serving: ServingViewModel? = nil) async throws -> AgentResult {
+                       serving: ServingViewModel? = nil,
+                       image: UIImage? = nil) async throws -> AgentResult {
         let dto = makeDTO(query: query, profile: profile, sources: sources,
-                          appleJSON: nil, serving: serving)
+                          appleJSON: nil, serving: serving, image: image)
         let r: AgentResultDTO = try await post(path: "/analyze/claude", body: dto)
         return r.toDomain(agentType: .claude)
     }
@@ -236,9 +240,10 @@ final class BackendAPIService: ObservableObject {
     func synthesizeGemini(query: String, profile: UserProfile,
                           sources: [UserSource] = [],
                           appleResultJSON: String,
-                          serving: ServingViewModel? = nil) async throws -> SynthesisResult {
+                          serving: ServingViewModel? = nil,
+                          image: UIImage? = nil) async throws -> SynthesisResult {
         let dto = makeDTO(query: query, profile: profile, sources: sources,
-                          appleJSON: appleResultJSON, serving: serving)
+                          appleJSON: appleResultJSON, serving: serving, image: image)
         let r: SynthesisResultDTO = try await post(path: "/analyze/gemini", body: dto)
         return r.toDomain()
     }
@@ -276,8 +281,23 @@ final class BackendAPIService: ObservableObject {
     // MARK: - DTO Builder
 
     private func makeDTO(query: String, profile: UserProfile, sources: [UserSource],
-                         appleJSON: String?, serving: ServingViewModel?) -> AnalysisRequestDTO {
-        AnalysisRequestDTO(
+                         appleJSON: String?, serving: ServingViewModel?, image: UIImage? = nil) -> AnalysisRequestDTO {
+        var imageBase64: String? = nil
+        var imageMimeType: String? = nil
+        
+        if let image = image {
+            // Resize image to max 2048px on longest side to reduce payload
+            let maxDimension: CGFloat = 2048
+            let resized = resizeImage(image, maxDimension: maxDimension)
+            
+            // Convert to JPEG with quality 0.8
+            if let jpegData = resized.jpegData(compressionQuality: 0.8) {
+                imageBase64 = jpegData.base64EncodedString()
+                imageMimeType = "image/jpeg"
+            }
+        }
+        
+        return AnalysisRequestDTO(
             query: query,
             user_profile: UserProfileDTO(
                 ibs_subtype: profile.ibsSubtype.rawValue,
@@ -296,8 +316,31 @@ final class BackendAPIService: ObservableObject {
                 ? serving?.servingDescription : nil,
             serving_fraction: (serving?.isStandardServing == false && serving?.useCustomGrams == false)
                 ? serving?.fraction : nil,
-            serving_amount_g: serving?.servingAmountG
+            serving_amount_g: serving?.servingAmountG,
+            image_base64: imageBase64,
+            image_mime_type: imageMimeType
         )
+    }
+    
+    private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+        guard size.width > maxDimension || size.height > maxDimension else {
+            return image
+        }
+        
+        let aspectRatio = size.width / size.height
+        let newSize: CGSize
+        
+        if size.width > size.height {
+            newSize = CGSize(width: maxDimension, height: maxDimension / aspectRatio)
+        } else {
+            newSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
+        }
+        
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
 }
 

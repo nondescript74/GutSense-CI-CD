@@ -199,7 +199,8 @@ final class QueryViewModel: ObservableObject {
                 query: resolvedQuery,
                 profile: userProfile,
                 sources: userSources,
-                serving: servingViewModel
+                serving: servingViewModel,
+                image: capturedImage
             )
             claudeResult = result
             claudeComplete = true
@@ -227,7 +228,8 @@ final class QueryViewModel: ObservableObject {
                 profile: userProfile,
                 sources: userSources,
                 appleResultJSON: appleJSON,
-                serving: servingViewModel
+                serving: servingViewModel,
+                image: capturedImage
             )
             geminiResult = result
             geminiComplete = true
