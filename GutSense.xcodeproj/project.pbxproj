@@ -125,11 +125,6 @@
 			path = GutSenseUITests;
 			sourceTree = "<group>";
 		};
-		F8F1A4AF2F59E29B009C2630 /* Docs */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Docs;
-			sourceTree = "<group>";
-		};
 		F8F1BB212F5A20A5009C2630 /* StrongGutAppClip */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -187,7 +182,6 @@
 		F8F1A47A2F59DDA7009C2630 = {
 			isa = PBXGroup;
 			children = (
-				F8F1A4AF2F59E29B009C2630 /* Docs */,
 				F8F1A4852F59DDA7009C2630 /* GutSense */,
 				F8F1A4952F59DDA9009C2630 /* GutSenseTests */,
 				F8F1A49F2F59DDA9009C2630 /* GutSenseUITests */,
@@ -232,7 +226,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				F8F1A4852F59DDA7009C2630 /* GutSense */,
-				F8F1A4AF2F59E29B009C2630 /* Docs */,
 			);
 			name = GutSense;
 			productName = GutSense;
@@ -620,7 +613,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = GutSense/GutSense.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = YKHW2TJ32G;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -629,6 +622,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GutSense/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Carols Gut";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSCameraUsageDescription = "We need camera access to scan barcodes on food products for FODMAP analysis";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need photo library access to analyze food images for ​FODMAP content";
@@ -673,7 +667,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = GutSense/GutSense.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = YKHW2TJ32G;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -682,6 +676,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GutSense/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Carols Gut";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSCameraUsageDescription = "We need camera access to scan barcodes on food products for FODMAP analysis";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need photo library access to analyze food images for ​FODMAP content";
@@ -829,7 +824,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StrongGutAppClip/StrongGutAppClip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = YKHW2TJ32G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -872,7 +867,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StrongGutAppClip/StrongGutAppClip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = YKHW2TJ32G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
