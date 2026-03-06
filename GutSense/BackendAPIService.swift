@@ -1,13 +1,16 @@
 // GutSense — BackendAPIService.swift
 // Adds serving_fraction, serving_amount_g, serving_description to every request
 
+// GutSense — BackendAPIService.swift
+// Adds serving_fraction, serving_amount_g, serving_description to every request
+
 import Foundation
 import Combine
 import UIKit
 
 // MARK: - Request DTOs
 
-struct AnalysisRequestDTO: Encodable {
+struct AnalysisRequestDTO: Codable {
     let query: String
     let user_profile: UserProfileDTO
     let user_sources: [UserSourceDTO]
@@ -16,10 +19,10 @@ struct AnalysisRequestDTO: Encodable {
     let serving_fraction: Double?
     let serving_amount_g: Double?
     let image_base64: String?
-    let image_mime_type: String?
+    let image_media_type: String?   // NOTE: was image_mime_type — renamed to match backend
 }
 
-struct UserProfileDTO: Encodable {
+struct UserProfileDTO: Codable {
     let ibs_subtype: String
     let fodmap_phase: String
     let known_triggers: [String]
@@ -28,7 +31,7 @@ struct UserProfileDTO: Encodable {
     let diagnosed_conditions: [String]
 }
 
-struct UserSourceDTO: Encodable {
+struct UserSourceDTO: Codable {
     let title: String
     let raw_text: String
     let is_anecdotal: Bool
@@ -214,8 +217,8 @@ final class BackendAPIService: ObservableObject {
 
     private var session: URLSession = {
         let c = URLSessionConfiguration.default
-        c.timeoutIntervalForRequest  = 45
-        c.timeoutIntervalForResource = 90
+        c.timeoutIntervalForRequest  = 120  // Increased to 2 minutes for synthesis
+        c.timeoutIntervalForResource = 180  // Increased to 3 minutes for synthesis
         return URLSession(configuration: c)
     }()
     private init() {}
@@ -237,6 +240,16 @@ final class BackendAPIService: ObservableObject {
         return r.toDomain(agentType: .claude)
     }
 
+    func analyzeGemini(query: String, profile: UserProfile,
+                       sources: [UserSource] = [],
+                       serving: ServingViewModel? = nil,
+                       image: UIImage? = nil) async throws -> AgentResult {
+        let dto = makeDTO(query: query, profile: profile, sources: sources,
+                          appleJSON: nil, serving: serving, image: image)
+        let r: AgentResultDTO = try await post(path: "/analyze/gemini", body: dto)
+        return r.toDomain(agentType: .gemini)
+    }
+
     func synthesizeGemini(query: String, profile: UserProfile,
                           sources: [UserSource] = [],
                           appleResultJSON: String,
@@ -244,8 +257,28 @@ final class BackendAPIService: ObservableObject {
                           image: UIImage? = nil) async throws -> SynthesisResult {
         let dto = makeDTO(query: query, profile: profile, sources: sources,
                           appleJSON: appleResultJSON, serving: serving, image: image)
-        let r: SynthesisResultDTO = try await post(path: "/analyze/gemini", body: dto)
-        return r.toDomain()
+        
+        // Retry up to 2 times on timeout errors
+        var lastError: Error?
+        for attempt in 1...2 {
+            do {
+                let r: SynthesisResultDTO = try await post(path: "/analyze/gemini", body: dto)
+                return r.toDomain()
+            } catch let error as BackendAPIError {
+                lastError = error
+                // Only retry on network errors (which includes timeouts)
+                if case .networkError = error, attempt < 2 {
+                    print("Gemini synthesis attempt \(attempt) failed with timeout, retrying...")
+                    try await Task.sleep(nanoseconds: 2_000_000_000) // Wait 2 seconds before retry
+                    continue
+                }
+                throw error
+            } catch {
+                throw error
+            }
+        }
+        
+        throw lastError ?? BackendAPIError.networkError(NSError(domain: "GutSense", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"]))
     }
 
     // MARK: - Generic POST
@@ -281,22 +314,20 @@ final class BackendAPIService: ObservableObject {
     // MARK: - DTO Builder
 
     private func makeDTO(query: String, profile: UserProfile, sources: [UserSource],
-                         appleJSON: String?, serving: ServingViewModel?, image: UIImage? = nil) -> AnalysisRequestDTO {
+                         appleJSON: String?, serving: ServingViewModel?,
+                         image: UIImage? = nil) -> AnalysisRequestDTO {
+
         var imageBase64: String? = nil
-        var imageMimeType: String? = nil
-        
+        var imageMediaType: String? = nil
+
         if let image = image {
-            // Resize image to max 2048px on longest side to reduce payload
-            let maxDimension: CGFloat = 2048
-            let resized = resizeImage(image, maxDimension: maxDimension)
-            
-            // Convert to JPEG with quality 0.8
+            let resized = resizeImage(image, maxDimension: 1024)
             if let jpegData = resized.jpegData(compressionQuality: 0.8) {
                 imageBase64 = jpegData.base64EncodedString()
-                imageMimeType = "image/jpeg"
+                imageMediaType = "image/jpeg"
             }
         }
-        
+
         return AnalysisRequestDTO(
             query: query,
             user_profile: UserProfileDTO(
@@ -318,31 +349,26 @@ final class BackendAPIService: ObservableObject {
                 ? serving?.fraction : nil,
             serving_amount_g: serving?.servingAmountG,
             image_base64: imageBase64,
-            image_mime_type: imageMimeType
+            image_media_type: imageMediaType
         )
     }
-    
+
     private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
         let size = image.size
-        guard size.width > maxDimension || size.height > maxDimension else {
-            return image
-        }
-        
+        guard size.width > maxDimension || size.height > maxDimension else { return image }
+
         let aspectRatio = size.width / size.height
-        let newSize: CGSize
-        
-        if size.width > size.height {
-            newSize = CGSize(width: maxDimension, height: maxDimension / aspectRatio)
-        } else {
-            newSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
-        }
-        
-        let renderer = UIGraphicsImageRenderer(size: newSize)
-        return renderer.image { _ in
+        let newSize: CGSize = size.width > size.height
+            ? CGSize(width: maxDimension, height: maxDimension / aspectRatio)
+            : CGSize(width: maxDimension * aspectRatio, height: maxDimension)
+
+        return UIGraphicsImageRenderer(size: newSize).image { _ in
             image.draw(in: CGRect(origin: .zero, size: newSize))
         }
     }
 }
+
+// MARK: - KeychainService convenience
 
 extension KeychainService {
     func read(forKey key: String) -> String? { try? read(for: key) }
@@ -356,7 +382,8 @@ extension AgentResultDTO {
             agent_type: result.agentType.rawValue,
             fodmap_tiers: result.fodmapTiers.map { IngredientFODMAPDTO.from($0) },
             ibs_trigger_probability: result.ibsTriggerProbability,
-            confidence_tier: result.confidenceTier.rawValue.lowercased().replacingOccurrences(of: " ", with: "-"),
+            confidence_tier: result.confidenceTier.rawValue.lowercased()
+                .replacingOccurrences(of: " ", with: "-"),
             confidence_interval: result.confidenceInterval,
             bioavailability: result.bioavailability.map { BioavailabilityChangeDTO.from($0) },
             enzyme_recommendations: result.enzymeRecommendations.map { EnzymeRecommendationDTO.from($0) },
@@ -418,7 +445,8 @@ extension CitationDTO {
         CitationDTO(
             title: citation.title,
             source: citation.source,
-            confidence_tier: citation.confidenceTier.rawValue.lowercased().replacingOccurrences(of: " ", with: "-"),
+            confidence_tier: citation.confidenceTier.rawValue.lowercased()
+                .replacingOccurrences(of: " ", with: "-"),
             url: citation.url
         )
     }
@@ -440,8 +468,8 @@ extension SafetyFlagDTO {
         let severity: String = {
             switch flag.severity {
             case .critical: return "critical"
-            case .warning: return "warning"
-            case .info: return "info"
+            case .warning:  return "warning"
+            case .info:     return "info"
             }
         }()
         return SafetyFlagDTO(message: flag.message, severity: severity)

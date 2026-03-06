@@ -45,14 +45,16 @@ struct QueryHistoryView: View {
             }
             .navigationTitle("Query History")
             .navigationDestination(for: FoodQueryRecord.self) { record in
-                if let apple = record.loadAppleResult(),
-                   let claude = record.loadClaudeResult(),
-                   let gemini = record.loadGeminiResult() {
+                if let claude = record.loadClaudeResult(),
+                   let gemini = record.loadGeminiResult(),
+                   let apple = record.loadAppleResult() {
+                    // Note: Historical data has old structure (Apple as agent, Gemini as synthesis)
+                    // We'll display it as-is for historical records
                     ThreePaneResultsView(
                         query: record.queryText,
-                        appleResult: apple,
                         claudeResult: claude,
                         geminiResult: gemini,
+                        appleResult: apple,
                         servingInfo: record.servingInfo,
                         appleService: AppleFoundationModelService.shared
                     )

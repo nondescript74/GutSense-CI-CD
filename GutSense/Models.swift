@@ -45,17 +45,17 @@ final class FoodQueryRecord: Identifiable, Hashable {
         self.timestamp = Date()
     }
     
-    func saveResults(apple: AgentResult, claude: AgentResult, gemini: SynthesisResult) {
-        self.ibsProbabilityApple = apple.ibsTriggerProbability
+    func saveResults(claude: AgentResult, gemini: AgentResult, apple: SynthesisResult) {
         self.ibsProbabilityClaude = claude.ibsTriggerProbability
-        self.ibsProbabilityGemini = gemini.finalIBSProbability
-        self.geminiRationale = gemini.synthesisRationale
+        self.ibsProbabilityGemini = gemini.ibsTriggerProbability
+        self.ibsProbabilityApple = apple.finalIBSProbability
+        self.geminiRationale = apple.synthesisRationale
         
         // Encode full results as JSON
         let encoder = JSONEncoder()
-        let appleDTO = AgentResultDTO.from(apple)
         let claudeDTO = AgentResultDTO.from(claude)
-        let geminiDTO = SynthesisResultDTO.from(gemini)
+        let geminiDTO = AgentResultDTO.from(gemini)
+        let appleDTO = SynthesisResultDTO.from(apple)
         
         MainActor.assumeIsolated {
             do {
@@ -75,15 +75,15 @@ final class FoodQueryRecord: Identifiable, Hashable {
         }
     }
     
-    func loadAppleResult() -> AgentResult? {
+    func loadAppleResult() -> SynthesisResult? {
         guard let json = appleResultJSON,
               let data = json.data(using: .utf8) else {
             return nil
         }
         return MainActor.assumeIsolated {
             do {
-                let dto = try JSONDecoder().decode(AgentResultDTO.self, from: data)
-                return dto.toDomain(agentType: .apple)
+                let dto = try JSONDecoder().decode(SynthesisResultDTO.self, from: data)
+                return dto.toDomain()
             } catch {
                 return nil
             }
@@ -105,15 +105,15 @@ final class FoodQueryRecord: Identifiable, Hashable {
         }
     }
     
-    func loadGeminiResult() -> SynthesisResult? {
+    func loadGeminiResult() -> AgentResult? {
         guard let json = geminiResultJSON,
               let data = json.data(using: .utf8) else {
             return nil
         }
         return MainActor.assumeIsolated {
             do {
-                let dto = try JSONDecoder().decode(SynthesisResultDTO.self, from: data)
-                return dto.toDomain()
+                let dto = try JSONDecoder().decode(AgentResultDTO.self, from: data)
+                return dto.toDomain(agentType: .gemini)
             } catch {
                 return nil
             }
@@ -234,9 +234,10 @@ enum FODMAPTier: String, CaseIterable {
 }
 
 enum AgentType: String {
-    case apple  = "apple"
-    case claude = "claude"
-    case gemini = "gemini"
+    case apple      = "apple"
+    case claude     = "claude"
+    case gemini     = "gemini"
+    case perplexity = "perplexity"
 }
 
 enum ConfidenceTier: String, CaseIterable {
@@ -262,7 +263,7 @@ enum ConfidenceTier: String, CaseIterable {
     }
 }
 
-enum FlagSeverity {
+enum FlagSeverity: Equatable, Sendable {
     case info
     case warning
     case critical

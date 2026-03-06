@@ -186,10 +186,14 @@ struct StrongGutClipView: View {
                    !queryViewModel.geminiResult.isLoading {
                     ThreePaneResultsView(
                         query: textQuery,
-                        appleResult: queryViewModel.appleResult,
                         claudeResult: queryViewModel.claudeResult,
                         geminiResult: queryViewModel.geminiResult,
+                        appleResult: queryViewModel.appleResult,
                         servingInfo: queryViewModel.servingViewModel.summaryLabel,
+                        capturedImage: nil,
+                        productName: nil,
+                        productImage: nil,
+                        barcodeValue: nil,
                         appleService: AppleFoundationModelService.shared
                     )
                 } else {

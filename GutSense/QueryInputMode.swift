@@ -63,22 +63,25 @@ final class QueryViewModel: ObservableObject {
     @Published var capturedImage: UIImage? = nil
     @Published var barcodeValue: String? = nil
     @Published var barcodeDetected: Bool = false
+    @Published var productName: String? = nil
+    @Published var productImageURL: String? = nil
+    @Published var productImage: UIImage? = nil
 
     // MARK: Agent results — update independently as each arrives
-    @Published var appleResult: AgentResult = .loading(for: .apple)
     @Published var claudeResult: AgentResult = .loading(for: .claude)
-    @Published var geminiResult: SynthesisResult = .loading
+    @Published var geminiResult: AgentResult = .loading(for: .gemini)
+    @Published var appleResult: SynthesisResult = .loading
 
     // MARK: Phase tracking
     @Published var phase: QueryPhase = .idle
-    @Published var appleComplete = false
     @Published var claudeComplete = false
     @Published var geminiComplete = false
+    @Published var appleComplete = false
 
     // MARK: Error tracking per agent
-    @Published var appleError: String? = nil
     @Published var claudeError: String? = nil
     @Published var geminiError: String? = nil
+    @Published var appleError: String? = nil
 
     // MARK: Navigation
     @Published var showResults = false
@@ -134,7 +137,11 @@ final class QueryViewModel: ObservableObject {
         case .photo:
             return "Analyze the food shown in this image for FODMAP content and IBS risk."
         case .barcode:
-            return "Barcode: \(barcodeValue ?? "unknown"). Identify this food product and analyze for FODMAP content and IBS risk."
+            if let name = productName {
+                return "\(name) (Barcode: \(barcodeValue ?? "unknown")). Analyze this food product for FODMAP content and IBS risk."
+            } else {
+                return "Barcode: \(barcodeValue ?? "unknown"). Identify this food product and analyze for FODMAP content and IBS risk."
+            }
         }
     }
 
@@ -145,27 +152,27 @@ final class QueryViewModel: ObservableObject {
 
         // Reset state
         phase = .running
-        appleComplete = false
         claudeComplete = false
         geminiComplete = false
-        appleError = nil
+        appleComplete = false
         claudeError = nil
         geminiError = nil
+        appleError = nil
 
-        appleResult = .loading(for: .apple)
         claudeResult = .loading(for: .claude)
-        geminiResult = .loading
+        geminiResult = .loading(for: .gemini)
+        appleResult = .loading
 
         showResults = true
 
-        // Stage 1: Apple + Claude fire in parallel
+        // Stage 1: Claude + Gemini fire in parallel (primary agents)
         await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.runAppleAgent() }
             group.addTask { await self.runClaudeAgent() }
+            group.addTask { await self.runGeminiAgent() }
         }
 
-        // Stage 2: Gemini synthesis — needs both results
-        await runGeminiSynthesis()
+        // Stage 2: Apple synthesis — needs both Claude and Gemini results
+        await runAppleSynthesis()
 
         phase = .complete
         
@@ -173,25 +180,7 @@ final class QueryViewModel: ObservableObject {
         saveToHistory()
     }
 
-    // MARK: - Apple Agent
-
-    private func runAppleAgent() async {
-        do {
-            let result = try await appleService.analyzeFODMAP(
-                query: resolvedQuery,
-                profile: userProfile,
-                sources: userSources
-            )
-            appleResult = result
-            appleComplete = true
-        } catch {
-            appleError = error.localizedDescription
-            appleResult = AgentResult.error(for: .apple, message: error.localizedDescription)
-            appleComplete = true
-        }
-    }
-
-    // MARK: - Claude Agent
+    // MARK: - Claude Agent (Primary Analysis)
 
     private func runClaudeAgent() async {
         do {
@@ -211,23 +200,14 @@ final class QueryViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Gemini Synthesis
+    // MARK: - Gemini Agent (Primary Analysis)
 
-    private func runGeminiSynthesis() async {
-        // Encode Apple result as JSON for backend
-        guard let appleJSON = encodeAppleResult() else {
-            geminiError = "Could not encode Apple result for synthesis."
-            geminiResult = SynthesisResult.error(message: "Apple result encoding failed.")
-            geminiComplete = true
-            return
-        }
-
+    private func runGeminiAgent() async {
         do {
-            let result = try await backendService.synthesizeGemini(
+            let result = try await backendService.analyzeGemini(
                 query: resolvedQuery,
                 profile: userProfile,
                 sources: userSources,
-                appleResultJSON: appleJSON,
                 serving: servingViewModel,
                 image: capturedImage
             )
@@ -235,16 +215,53 @@ final class QueryViewModel: ObservableObject {
             geminiComplete = true
         } catch {
             geminiError = error.localizedDescription
-            geminiResult = SynthesisResult.error(message: error.localizedDescription)
+            geminiResult = AgentResult.error(for: .gemini, message: error.localizedDescription)
             geminiComplete = true
+        }
+    }
+
+    // MARK: - Apple Synthesis (Reconciles Claude + Gemini)
+
+    private func runAppleSynthesis() async {
+        // Check if Apple Intelligence is available
+        guard appleService.isAvailable else {
+            appleError = "Apple Intelligence not available"
+            appleResult = SynthesisResult.error(message: "Apple Intelligence not available for synthesis. Using Claude result as fallback.")
+            appleComplete = true
+            return
+        }
+
+        // Encode Claude and Gemini results for synthesis
+        guard let claudeJSON = encodeAgentResult(claudeResult),
+              let geminiJSON = encodeAgentResult(geminiResult) else {
+            appleError = "Could not encode agent results for synthesis."
+            appleResult = SynthesisResult.error(message: "Agent result encoding failed.")
+            appleComplete = true
+            return
+        }
+
+        do {
+            let result = try await appleService.synthesizeResults(
+                query: resolvedQuery,
+                profile: userProfile,
+                sources: userSources,
+                claudeJSON: claudeJSON,
+                geminiJSON: geminiJSON
+            )
+            appleResult = result
+            appleComplete = true
+        } catch {
+            appleError = error.localizedDescription
+            appleResult = SynthesisResult.error(message: error.localizedDescription)
+            appleComplete = true
         }
     }
 
     // MARK: - Helpers
 
-    private func encodeAppleResult() -> String? {
-        // Encode current apple result to JSON string for Gemini endpoint
-        struct AppleExport: Encodable {
+    private func encodeAgentResult(_ result: AgentResult) -> String? {
+        // Encode agent result to JSON string for synthesis
+        struct AgentExport: Encodable {
             let agent_type: String
             let fodmap_tiers: [[String: String]]
             let ibs_trigger_probability: Double
@@ -253,9 +270,9 @@ final class QueryViewModel: ObservableObject {
             let total_gos_g: Double
         }
 
-        let export = AppleExport(
-            agent_type: "apple",
-            fodmap_tiers: appleResult.fodmapTiers.map { item in
+        let export = AgentExport(
+            agent_type: result.agentType.rawValue,
+            fodmap_tiers: result.fodmapTiers.map { item in
                 var d: [String: String] = [
                     "ingredient": item.ingredient,
                     "tier": item.tier.rawValue.lowercased(),
@@ -265,10 +282,10 @@ final class QueryViewModel: ObservableObject {
                 if let g = item.gosG     { d["gos_g"] = String(g) }
                 return d
             },
-            ibs_trigger_probability: appleResult.ibsTriggerProbability,
-            confidence_tier: appleResult.confidenceTier.rawValue,
-            total_fructan_g: appleResult.totalFructanG,
-            total_gos_g: appleResult.totalGOSG
+            ibs_trigger_probability: result.ibsTriggerProbability,
+            confidence_tier: result.confidenceTier.rawValue,
+            total_fructan_g: result.totalFructanG,
+            total_gos_g: result.totalGOSG
         )
 
         guard let data = try? JSONEncoder().encode(export) else { return nil }
@@ -286,7 +303,7 @@ final class QueryViewModel: ObservableObject {
             servingInfo: servingViewModel.summaryLabel
         )
         
-        record.saveResults(apple: appleResult, claude: claudeResult, gemini: geminiResult)
+        record.saveResults(claude: claudeResult, gemini: geminiResult, apple: appleResult)
         
         context.insert(record)
         
@@ -294,6 +311,37 @@ final class QueryViewModel: ObservableObject {
             try context.save()
         } catch {
             print("Failed to save query to history: \(error)")
+        }
+    }
+    
+    // MARK: - Product Lookup
+    
+    func lookupProduct(barcode: String) async {
+        productName = nil
+        productImageURL = nil
+        productImage = nil
+        
+        guard let url = URL(string: "https://world.openfoodfacts.org/api/v2/product/\(barcode).json") else {
+            return
+        }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try JSONDecoder().decode(OpenFoodFactsResponse.self, from: data)
+            
+            if response.status == 1, let product = response.product {
+                productName = product.product_name ?? product.product_name_en
+                productImageURL = product.image_url
+                
+                // Load product image if available
+                if let imageURLString = product.image_url,
+                   let imageURL = URL(string: imageURLString) {
+                    let (imageData, _) = try await URLSession.shared.data(from: imageURL)
+                    productImage = UIImage(data: imageData)
+                }
+            }
+        } catch {
+            print("Failed to lookup product: \(error)")
         }
     }
     
@@ -305,12 +353,28 @@ final class QueryViewModel: ObservableObject {
         barcodeValue = nil
         barcodeDetected = false
         selectedPhoto = nil
+        productName = nil
+        productImageURL = nil
+        productImage = nil
         phase = .idle
         showResults = false
-        appleResult = .loading(for: .apple)
         claudeResult = .loading(for: .claude)
-        geminiResult = .loading
+        geminiResult = .loading(for: .gemini)
+        appleResult = .loading
     }
+}
+
+// MARK: - Open Food Facts API Models
+
+struct OpenFoodFactsResponse: Codable {
+    let status: Int
+    let product: OpenFoodFactsProduct?
+}
+
+struct OpenFoodFactsProduct: Codable {
+    let product_name: String?
+    let product_name_en: String?
+    let image_url: String?
 }
 
 // MARK: - AgentResult convenience factories

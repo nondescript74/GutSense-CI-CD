@@ -86,6 +86,40 @@ final class AppleFoundationModelService: ObservableObject {
         return parseResponse(response.content, latencyMs: latencyMs, profile: profile)
     }
 
+    // MARK: - Synthesis (Reconcile Claude + Gemini)
+
+    func synthesizeResults(
+        query: String,
+        profile: UserProfile,
+        sources: [UserSource] = [],
+        claudeJSON: String,
+        geminiJSON: String
+    ) async throws -> SynthesisResult {
+
+        guard isAvailable else {
+            return fallbackSynthesisResult(reason: unavailabilityMessage)
+        }
+
+        let querySession = LanguageModelSession(
+            model: model,
+            instructions: buildSynthesisInstructions(profile: profile)
+        )
+
+        let prompt = buildSynthesisPrompt(
+            query: query,
+            claudeJSON: claudeJSON,
+            geminiJSON: geminiJSON,
+            profile: profile,
+            sources: sources
+        )
+
+        let startTime = Date()
+        let response = try await querySession.respond(to: prompt)
+        let latencyMs = Int(Date().timeIntervalSince(startTime) * 1000)
+
+        return parseSynthesisResponse(response.content, latencyMs: latencyMs)
+    }
+
     // MARK: - System Instructions (role + rules)
 
     private func buildSystemInstructions(profile: UserProfile) -> String {
@@ -184,6 +218,92 @@ final class AppleFoundationModelService: ObservableObject {
         )
     }
 
+    // MARK: - Synthesis Instructions & Parsing
+
+    private func buildSynthesisInstructions(profile: UserProfile) -> String {
+        """
+        You are synthesizing two FODMAP analyses (Claude and Gemini) into a final reconciled verdict.
+
+        PATIENT PROFILE:
+        - IBS Subtype: \(profile.ibsSubtype.rawValue)
+        - FODMAP Phase: \(profile.fodmapPhase.rawValue)
+        - Known Triggers: \(profile.knownTriggers.map(\.rawValue).joined(separator: ", "))
+
+        YOUR TASK:
+        1. Reconcile differences between Claude and Gemini analyses
+        2. Provide final FODMAP tiers (prefer the more conservative assessment)
+        3. Calculate final IBS trigger probability with confidence band
+        4. Identify key disagreements between agents
+        5. Provide synthesis rationale explaining your reconciliation
+
+        RULES:
+        - Be conservative: if agents disagree on tier, choose the higher risk
+        - Document all disagreements in key_disagreements array
+        - Final probability should reflect reconciled view
+        - This is NOT medical advice — always include safety flag
+
+        Respond with JSON only. No preamble. No markdown fences.
+        Use this schema:
+        {
+          "reconciled_tiers": [{"ingredient":"..","tier":"low|moderate|high","fructan_g":null,"gos_g":null,"lactose_g":null,"fructose_g":null,"polyol_g":null,"serving_size_g":100,"source":"Reconciled"}],
+          "final_ibs_probability": 0.0,
+          "confidence_band": 0.10,
+          "enzyme_recommendation": null,
+          "key_disagreements": ["Claude says X, Gemini says Y - reconciled to Z"],
+          "synthesis_rationale": "Detailed explanation of reconciliation process...",
+          "safety_flags": [{"message":"Not a substitute for medical advice.","severity":"info"}]
+        }
+        """
+    }
+
+    private func buildSynthesisPrompt(
+        query: String,
+        claudeJSON: String,
+        geminiJSON: String,
+        profile: UserProfile,
+        sources: [UserSource]
+    ) -> String {
+        var prompt = """
+        Synthesize these two FODMAP analyses for: \(query)
+
+        CLAUDE ANALYSIS:
+        \(claudeJSON)
+
+        GEMINI ANALYSIS:
+        \(geminiJSON)
+        """
+
+        if !sources.isEmpty {
+            let anecdotes = sources.filter { $0.isAnecdotal }.map { "- [ANECDOTAL] \($0.title): \($0.rawText.prefix(200))" }
+            if !anecdotes.isEmpty {
+                prompt += "\n\nUser-provided anecdotal sources:\n" + anecdotes.joined(separator: "\n")
+            }
+        }
+
+        return prompt
+    }
+
+    private func parseSynthesisResponse(_ text: String, latencyMs: Int) -> SynthesisResult {
+        var cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.hasPrefix("```") {
+            let lines = cleaned.components(separatedBy: "\n")
+            cleaned = lines.dropFirst().dropLast().joined(separator: "\n")
+        }
+
+        guard let data = cleaned.data(using: .utf8) else {
+            return fallbackSynthesisResult(reason: "Apple synthesis returned unexpected format.")
+        }
+
+        let dto: SynthesisResultDTO
+        do {
+            dto = try JSONDecoder().decode(SynthesisResultDTO.self, from: data)
+        } catch {
+            return fallbackSynthesisResult(reason: "Apple synthesis returned unexpected format: \(error.localizedDescription)")
+        }
+
+        return dto.toDomain()
+    }
+
     // MARK: - Fallback
 
     private var unavailabilityMessage: String {
@@ -212,6 +332,19 @@ final class AppleFoundationModelService: ObservableObject {
             totalGOSG: 0,
             safetyFlags: [SafetyFlag(message: reason, severity: .warning)],
             processingLatencyMs: 0,
+            isLoading: false
+        )
+    }
+
+    private func fallbackSynthesisResult(reason: String) -> SynthesisResult {
+        SynthesisResult(
+            reconciledTiers: [],
+            finalIBSProbability: 0,
+            confidenceBand: 0,
+            enzymeRecommendation: nil,
+            keyDisagreements: [],
+            synthesisRationale: reason,
+            safetyFlags: [SafetyFlag(message: reason, severity: .warning)],
             isLoading: false
         )
     }

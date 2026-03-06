@@ -15,9 +15,9 @@ import SwiftUI
 // MARK: - Mock Data
 
 extension AgentResult {
-    static var appleMock: AgentResult {
+    static var geminiMock: AgentResult {
         AgentResult(
-            agentType: .apple,
+            agentType: .gemini,
             fodmapTiers: [
                 IngredientFODMAP(ingredient: "Garlic", tier: .high, fructanG: 0.41, gosG: nil, lactoseG: nil, fructoseG: nil, polyolG: nil, servingSizeG: 3, source: "Monash"),
                 IngredientFODMAP(ingredient: "Wheat bread", tier: .high, fructanG: 0.65, gosG: nil, lactoseG: nil, fructoseG: nil, polyolG: nil, servingSizeG: 30, source: "Monash"),
@@ -81,7 +81,7 @@ extension AgentResult {
 }
 
 extension SynthesisResult {
-    static var geminiMock: SynthesisResult {
+    static var appleSynthesisMock: SynthesisResult {
         SynthesisResult(
             reconciledTiers: [
                 IngredientFODMAP(ingredient: "Garlic", tier: .high, fructanG: 0.40, gosG: 0.01, lactoseG: nil, fructoseG: nil, polyolG: nil, servingSizeG: 3, source: "Reconciled"),
@@ -651,42 +651,115 @@ struct ClaudeAgentPane: View {
     }
 }
 
-// MARK: - Gemini Synthesis Pane
+// MARK: - Gemini Agent Pane
 
-struct GeminiSynthesisPane: View {
+struct GeminiAgentPane: View {
+    let result: AgentResult
+
+    var body: some View {
+        VStack(spacing: 0) {
+            AgentPaneHeader(
+                title: "Gemini",
+                icon: "brain.head.profile",
+                color: Color(red: 0.25, green: 0.52, blue: 0.96),
+                latencyMs: result.isLoading ? nil : result.processingLatencyMs,
+                isLoading: result.isLoading
+            )
+
+            if result.isLoading {
+                Spacer()
+                ProgressView("Analyzing patterns…")
+                    .font(.caption)
+                Spacer()
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 10) {
+
+                        // FODMAP Tiers
+                        Text("FODMAP Analysis")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.secondary)
+                        ForEach(result.fodmapTiers) { item in
+                            FODMAPTierBadge(item: item)
+                        }
+
+                        Divider()
+
+                        // IBS Probability
+                        ProbabilityGauge(
+                            probability: result.ibsTriggerProbability,
+                            confidenceInterval: result.confidenceInterval + result.confidenceTier.uncertaintyBoost,
+                            label: "IBS Trigger Risk"
+                        )
+
+                        if result.personalizedRiskDelta > 0 {
+                            Text("↑ \(Int(result.personalizedRiskDelta * 100))% above your baseline")
+                                .font(.caption2)
+                                .foregroundColor(.red)
+                        }
+
+                        // Safety Flags
+                        if !result.safetyFlags.isEmpty {
+                            Divider()
+                            ForEach(result.safetyFlags) { flag in
+                                SafetyFlagView(flag: flag)
+                            }
+                        }
+                    }
+                    .padding(12)
+                }
+            }
+        }
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.2)))
+    }
+}
+
+// MARK: - Apple Synthesis Pane
+
+struct AppleSynthesisPane: View {
     let result: SynthesisResult
+    @ObservedObject var appleService: AppleFoundationModelService
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack(spacing: 6) {
-                Image(systemName: "brain.head.profile")
-                    .foregroundColor(Color(red: 0.25, green: 0.52, blue: 0.96))
+                Image(systemName: "apple.logo")
+                    .foregroundColor(.blue)
                     .font(.subheadline.weight(.bold))
-                Text("Gemini Synthesis")
+                Text("Apple Synthesis")
                     .font(.subheadline.weight(.bold))
-                    .foregroundColor(Color(red: 0.25, green: 0.52, blue: 0.96))
+                    .foregroundColor(.blue)
                 Spacer()
                 if result.isLoading {
                     ProgressView().scaleEffect(0.7)
-                } else {
+                } else if appleService.isAvailable {
                     Text("Reconciled verdict")
                         .font(.caption2)
                         .foregroundColor(.secondary)
+                } else {
+                    Text("Unavailable")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color(red: 0.25, green: 0.52, blue: 0.96).opacity(0.08))
+            .background(Color.blue.opacity(0.08))
 
             if result.isLoading {
-                HStack {
-                    Spacer()
-                    ProgressView("Synthesizing agent results…")
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Synthesizing Claude + Gemini results…")
+                        .font(.subheadline)
+                    Text("Apple Intelligence is reconciling the analyses")
                         .font(.caption)
-                    Spacer()
+                        .foregroundColor(.secondary)
                 }
-                .padding()
+                .frame(maxWidth: .infinity)
+                .padding(32)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 16) {
@@ -785,10 +858,14 @@ struct GeminiSynthesisPane: View {
 
 struct ThreePaneResultsView: View {
     let query: String
-    let appleResult: AgentResult
     let claudeResult: AgentResult
-    let geminiResult: SynthesisResult
+    let geminiResult: AgentResult
+    let appleResult: SynthesisResult
     var servingInfo: String? = nil
+    var capturedImage: UIImage? = nil
+    var productName: String? = nil
+    var productImage: UIImage? = nil
+    var barcodeValue: String? = nil
     @ObservedObject var appleService: AppleFoundationModelService
     
     @State private var showFeedback = false
@@ -797,16 +874,94 @@ struct ThreePaneResultsView: View {
         VStack(spacing: 0) {
             // Query header
             VStack(spacing: 0) {
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                    Text(query)
-                        .font(.subheadline.weight(.medium))
-                        .lineLimit(2)
-                    Spacer()
+                // Barcode product info if available
+                if let barcode = barcodeValue {
+                    HStack(alignment: .top, spacing: 12) {
+                        // Product image
+                        if let productImg = productImage {
+                            Image(uiImage: productImg)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 60, height: 60)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
+                        } else {
+                            Image(systemName: "barcode")
+                                .font(.title2)
+                                .foregroundColor(.accentColor)
+                                .frame(width: 60, height: 60)
+                                .background(Color(.secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            if let name = productName {
+                                Text(name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .lineLimit(2)
+                            } else {
+                                Text("Barcode Product")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            HStack(spacing: 4) {
+                                Image(systemName: "barcode")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                Text(barcode)
+                                    .font(.caption.monospaced())
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                // Image thumbnail if available
+                else if let image = capturedImage {
+                    HStack {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 60, height: 60)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                            )
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "photo")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption2)
+                                Text("Analyzing this image")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Text(query)
+                                .font(.subheadline.weight(.medium))
+                                .lineLimit(2)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                } else {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        Text(query)
+                            .font(.subheadline.weight(.medium))
+                            .lineLimit(2)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
                 
                 // Serving size info if available
                 if let serving = servingInfo {
@@ -827,8 +982,8 @@ struct ThreePaneResultsView: View {
 
             ScrollView {
                 VStack(spacing: 12) {
-                    // Top: Gemini Synthesis (most important - synthesized result)
-                    GeminiSynthesisPane(result: geminiResult)
+                    // Top: Apple Synthesis (reconciles Claude + Gemini)
+                    AppleSynthesisPane(result: appleResult, appleService: appleService)
                         .frame(minHeight: 240)
                     
                     // Feedback button
@@ -843,13 +998,13 @@ struct ThreePaneResultsView: View {
                     }
                     .padding(.top, 8)
 
-                    // Bottom row: Apple | Claude (supporting details)
+                    // Bottom row: Claude | Gemini (primary analyses)
                     GeometryReader { geo in
                         HStack(alignment: .top, spacing: 10) {
-                            AppleAgentPane(result: appleResult, appleService: appleService)
+                            ClaudeAgentPane(result: claudeResult)
                                 .frame(width: (geo.size.width - 10) / 2)
 
-                            ClaudeAgentPane(result: claudeResult)
+                            GeminiAgentPane(result: geminiResult)
                                 .frame(width: (geo.size.width - 10) / 2)
                         }
                     }
@@ -890,9 +1045,9 @@ struct ClearBackgroundView: UIViewRepresentable {
     NavigationStack {
         ThreePaneResultsView(
             query: "Garlic bread with olive oil — is it safe for IBS-D?",
-            appleResult: .appleMock,
             claudeResult: .claudeMock,
             geminiResult: .geminiMock,
+            appleResult: .appleSynthesisMock,
             servingInfo: "1× serving (100%)",
             appleService: AppleFoundationModelService.shared
         )

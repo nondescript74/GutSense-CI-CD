@@ -79,10 +79,14 @@ struct QueryInputView: View {
             .navigationDestination(isPresented: $viewModel.showResults) {
                 ThreePaneResultsView(
                     query: vm.resolvedQuery,
-                    appleResult: vm.appleResult,
                     claudeResult: vm.claudeResult,
                     geminiResult: vm.geminiResult,
+                    appleResult: vm.appleResult,
                     servingInfo: vm.servingViewModel.summaryLabel,
+                    capturedImage: vm.capturedImage,
+                    productName: vm.productName,
+                    productImage: vm.productImage,
+                    barcodeValue: vm.barcodeValue,
                     appleService: AppleFoundationModelService.shared
                 )
                 .navigationBarBackButtonHidden(vm.phase.isRunning)
@@ -249,29 +253,74 @@ struct BarcodeInputPanel: View {
     var body: some View {
         VStack(spacing: 12) {
             if let code = vm.barcodeValue {
-                HStack {
-                    Image(systemName: "barcode")
-                        .font(.title2)
-                        .foregroundColor(.accentColor)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Barcode Detected")
-                            .font(.subheadline.weight(.semibold))
-                        Text(code)
-                            .font(.caption.monospaced())
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    Button {
-                        vm.barcodeValue = nil
-                        vm.barcodeDetected = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
+                VStack(spacing: 12) {
+                    // Product info card
+                    HStack(alignment: .top, spacing: 12) {
+                        // Product image thumbnail
+                        if let productImage = vm.productImage {
+                            Image(uiImage: productImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 80, height: 80)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
+                        } else {
+                            Image(systemName: "photo")
+                                .font(.title)
+                                .foregroundColor(.secondary)
+                                .frame(width: 80, height: 80)
+                                .background(Color(.secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            // Product name
+                            if let productName = vm.productName {
+                                Text(productName)
+                                    .font(.subheadline.weight(.semibold))
+                                    .lineLimit(2)
+                            } else {
+                                Text("Loading product info...")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            // Barcode
+                            HStack(spacing: 4) {
+                                Image(systemName: "barcode")
+                                    .font(.caption2)
+                                    .foregroundColor(.accentColor)
+                                Text(code)
+                                    .font(.caption.monospaced())
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        // Remove button
+                        Button {
+                            vm.barcodeValue = nil
+                            vm.barcodeDetected = false
+                            vm.productName = nil
+                            vm.productImage = nil
+                            vm.productImageURL = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 .padding(14)
                 .background(Color.accentColor.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                .task {
+                    await vm.lookupProduct(barcode: code)
+                }
             } else {
                 Button {
                     showScanner = true
