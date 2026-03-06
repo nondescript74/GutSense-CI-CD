@@ -74,6 +74,9 @@ final class QueryViewModel: ObservableObject {
 
     // MARK: Phase tracking
     @Published var phase: QueryPhase = .idle
+    
+    // Current query record for saving partial results
+    var currentQueryRecord: FoodQueryRecord?
     @Published var claudeComplete = false
     @Published var geminiComplete = false
     @Published var appleComplete = false
@@ -146,6 +149,33 @@ final class QueryViewModel: ObservableObject {
     }
 
     // MARK: - Main Analysis Pipeline
+    
+    func resumeAnalysis() async {
+        guard canSubmit else { return }
+        
+        phase = .running
+        showResults = true
+        
+        // Only run agents that haven't completed
+        await withTaskGroup(of: Void.self) { group in
+            if !claudeComplete {
+                group.addTask { await self.runClaudeAgent() }
+            }
+            if !geminiComplete {
+                group.addTask { await self.runGeminiAgent() }
+            }
+        }
+        
+        // Run Apple synthesis if not complete
+        if !appleComplete {
+            await runAppleSynthesis()
+        }
+        
+        phase = .complete
+        
+        // Save final results
+        saveToHistory()
+    }
 
     func analyze() async {
         guard canSubmit else { return }
@@ -164,6 +194,9 @@ final class QueryViewModel: ObservableObject {
         appleResult = .loading
 
         showResults = true
+        
+        // Create query record early so we can save partial results
+        createQueryRecord()
 
         // Stage 1: Claude + Gemini fire in parallel (primary agents)
         await withTaskGroup(of: Void.self) { group in
@@ -176,7 +209,7 @@ final class QueryViewModel: ObservableObject {
 
         phase = .complete
         
-        // Stage 3: Save to history
+        // Stage 3: Save final results to history
         saveToHistory()
     }
 
@@ -193,10 +226,12 @@ final class QueryViewModel: ObservableObject {
             )
             claudeResult = result
             claudeComplete = true
+            savePartialResults()
         } catch {
             claudeError = error.localizedDescription
             claudeResult = AgentResult.error(for: .claude, message: error.localizedDescription)
             claudeComplete = true
+            savePartialResults()
         }
     }
 
@@ -213,10 +248,12 @@ final class QueryViewModel: ObservableObject {
             )
             geminiResult = result
             geminiComplete = true
+            savePartialResults()
         } catch {
             geminiError = error.localizedDescription
             geminiResult = AgentResult.error(for: .gemini, message: error.localizedDescription)
             geminiComplete = true
+            savePartialResults()
         }
     }
 
@@ -240,6 +277,10 @@ final class QueryViewModel: ObservableObject {
             return
         }
 
+        // Debug: print JSON length to verify encoding
+        print("🍎 Apple Synthesis - Claude JSON length: \(claudeJSON.count)")
+        print("🍎 Apple Synthesis - Gemini JSON length: \(geminiJSON.count)")
+        
         do {
             let result = try await appleService.synthesizeResults(
                 query: resolvedQuery,
@@ -248,12 +289,15 @@ final class QueryViewModel: ObservableObject {
                 claudeJSON: claudeJSON,
                 geminiJSON: geminiJSON
             )
+            print("🍎 Apple Synthesis - Result: \(result.synthesisRationale)")
             appleResult = result
             appleComplete = true
+            savePartialResults()
         } catch {
             appleError = error.localizedDescription
             appleResult = SynthesisResult.error(message: error.localizedDescription)
             appleComplete = true
+            savePartialResults()
         }
     }
 
@@ -294,7 +338,7 @@ final class QueryViewModel: ObservableObject {
 
     // MARK: - Save to History
     
-    private func saveToHistory() {
+    private func createQueryRecord() {
         guard let context = modelContext else { return }
         
         let record = FoodQueryRecord(
@@ -303,15 +347,48 @@ final class QueryViewModel: ObservableObject {
             servingInfo: servingViewModel.summaryLabel
         )
         
-        record.saveResults(claude: claudeResult, gemini: geminiResult, apple: appleResult)
-        
         context.insert(record)
+        currentQueryRecord = record
+        
+        do {
+            try context.save()
+        } catch {
+            print("Failed to create query record: \(error)")
+        }
+    }
+    
+    private func savePartialResults() {
+        guard let record = currentQueryRecord else { return }
+        guard let context = modelContext else { return }
+        
+        let claude = claudeComplete && !claudeResult.isLoading ? claudeResult : nil
+        let gemini = geminiComplete && !geminiResult.isLoading ? geminiResult : nil
+        let apple = appleComplete && !appleResult.isLoading ? appleResult : nil
+        
+        record.savePartialResults(claude: claude, gemini: gemini, apple: apple)
+        
+        do {
+            try context.save()
+        } catch {
+            print("Failed to save partial results: \(error)")
+        }
+    }
+    
+    private func saveToHistory() {
+        guard let record = currentQueryRecord else { return }
+        guard let context = modelContext else { return }
+        
+        // Save complete results
+        record.saveResults(claude: claudeResult, gemini: geminiResult, apple: appleResult)
         
         do {
             try context.save()
         } catch {
             print("Failed to save query to history: \(error)")
         }
+        
+        // Clear current record reference
+        currentQueryRecord = nil
     }
     
     // MARK: - Product Lookup

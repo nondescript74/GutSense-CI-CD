@@ -869,6 +869,48 @@ struct ThreePaneResultsView: View {
     @ObservedObject var appleService: AppleFoundationModelService
     
     @State private var showFeedback = false
+    
+    // Calculate total weight from reconciled ingredients
+    private var totalServingWeight: Double {
+        appleResult.reconciledTiers.reduce(0.0) { $0 + $1.servingSizeG }
+    }
+    
+    // Enhanced serving info with actual weight
+    private var enhancedServingInfo: String? {
+        guard let serving = servingInfo else { return nil }
+        
+        // Parse the serving fraction from the label (e.g., "½ serving (50%)" -> 0.5)
+        let fraction: Double
+        if serving.contains("¼") {
+            fraction = 0.25
+        } else if serving.contains("½") {
+            fraction = 0.5
+        } else if serving.contains("¾") {
+            fraction = 0.75
+        } else if serving.contains("1½") {
+            fraction = 1.5
+        } else if serving.contains("2×") {
+            fraction = 2.0
+        } else if serving.contains("1×") {
+            fraction = 1.0
+        } else if serving.contains("g consumed") {
+            // Custom grams already specified
+            return serving
+        } else {
+            // Default to 1.0 if we can't parse
+            fraction = 1.0
+        }
+        
+        // Calculate actual weight
+        let actualWeight = totalServingWeight * fraction
+        
+        // Return enhanced label
+        if actualWeight > 0 {
+            return "\(serving) ≈ \(Int(actualWeight))g total"
+        } else {
+            return serving
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -964,7 +1006,7 @@ struct ThreePaneResultsView: View {
                 }
                 
                 // Serving size info if available
-                if let serving = servingInfo {
+                if let serving = enhancedServingInfo {
                     HStack {
                         Image(systemName: "scalemass.fill")
                             .foregroundColor(.accentColor)

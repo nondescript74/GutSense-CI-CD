@@ -64,6 +64,51 @@ struct UserSourceDTO: Codable {
     let key_disagreements: [String]
     let synthesis_rationale: String
     let safety_flags: [SafetyFlagDTO]
+    
+    // Regular initializer for encoding
+    nonisolated init(reconciled_tiers: [IngredientFODMAPDTO],
+         final_ibs_probability: Double,
+         confidence_band: Double,
+         enzyme_recommendation: EnzymeRecommendationDTO?,
+         key_disagreements: [String],
+         synthesis_rationale: String,
+         safety_flags: [SafetyFlagDTO]) {
+        self.reconciled_tiers = reconciled_tiers
+        self.final_ibs_probability = final_ibs_probability
+        self.confidence_band = confidence_band
+        self.enzyme_recommendation = enzyme_recommendation
+        self.key_disagreements = key_disagreements
+        self.synthesis_rationale = synthesis_rationale
+        self.safety_flags = safety_flags
+    }
+    
+    // Custom decoding to handle Apple Intelligence returning objects instead of strings
+    nonisolated init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        reconciled_tiers = try container.decode([IngredientFODMAPDTO].self, forKey: .reconciled_tiers)
+        final_ibs_probability = try container.decode(Double.self, forKey: .final_ibs_probability)
+        confidence_band = try container.decode(Double.self, forKey: .confidence_band)
+        enzyme_recommendation = try container.decodeIfPresent(EnzymeRecommendationDTO.self, forKey: .enzyme_recommendation)
+        synthesis_rationale = try container.decode(String.self, forKey: .synthesis_rationale)
+        safety_flags = try container.decode([SafetyFlagDTO].self, forKey: .safety_flags)
+        
+        // Handle key_disagreements - can be array of strings or array of objects
+        if let disagreements = try? container.decode([String].self, forKey: .key_disagreements) {
+            key_disagreements = disagreements
+        } else if let disagreementDicts = try? container.decode([[String: String]].self, forKey: .key_disagreements) {
+            // Apple Intelligence sometimes returns objects - extract the first value from each dict
+            key_disagreements = disagreementDicts.compactMap { dict in
+                dict.values.first
+            }
+        } else {
+            key_disagreements = []
+        }
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case reconciled_tiers, final_ibs_probability, confidence_band
+        case enzyme_recommendation, key_disagreements, synthesis_rationale, safety_flags
+    }
 }
 
 struct IngredientFODMAPDTO: Codable, @unchecked Sendable {

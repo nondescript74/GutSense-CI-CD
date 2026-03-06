@@ -45,23 +45,27 @@ struct QueryHistoryView: View {
             }
             .navigationTitle("Query History")
             .navigationDestination(for: FoodQueryRecord.self) { record in
-                if let claude = record.loadClaudeResult(),
-                   let gemini = record.loadGeminiResult(),
-                   let apple = record.loadAppleResult() {
-                    // Note: Historical data has old structure (Apple as agent, Gemini as synthesis)
-                    // We'll display it as-is for historical records
-                    ThreePaneResultsView(
-                        query: record.queryText,
-                        claudeResult: claude,
-                        geminiResult: gemini,
-                        appleResult: apple,
-                        servingInfo: record.servingInfo,
-                        appleService: AppleFoundationModelService.shared
-                    )
-                    .navigationTitle("Saved Analysis")
-                    .navigationBarTitleDisplayMode(.inline)
+                if record.isComplete {
+                    // Complete analysis - show results
+                    if let claude = record.loadClaudeResult(),
+                       let gemini = record.loadGeminiResult(),
+                       let apple = record.loadAppleResult() {
+                        ThreePaneResultsView(
+                            query: record.queryText,
+                            claudeResult: claude,
+                            geminiResult: gemini,
+                            appleResult: apple,
+                            servingInfo: record.servingInfo,
+                            appleService: AppleFoundationModelService.shared
+                        )
+                        .navigationTitle("Saved Analysis")
+                        .navigationBarTitleDisplayMode(.inline)
+                    } else {
+                        Text("Unable to load saved results")
+                    }
                 } else {
-                    Text("Unable to load saved results")
+                    // Incomplete analysis - offer to resume
+                    IncompleteAnalysisView(record: record)
                 }
             }
             .toolbar {
@@ -157,6 +161,143 @@ struct QueryHistoryView: View {
         // This would require tab selection binding from ContentView
     }
 }
+// MARK: - Incomplete Analysis View
+
+struct IncompleteAnalysisView: View {
+    let record: FoodQueryRecord
+    @EnvironmentObject var queryViewModel: QueryViewModel
+    @Environment(\.dismiss) private var dismiss
+    
+    private var hasClaudeResult: Bool {
+        record.loadClaudeResult() != nil
+    }
+    
+    private var hasGeminiResult: Bool {
+        record.loadGeminiResult() != nil
+    }
+    
+    private var hasAppleResult: Bool {
+        record.loadAppleResult() != nil
+    }
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            // Warning icon
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.orange)
+            
+            Text("Incomplete Analysis")
+                .font(.title2.weight(.bold))
+            
+            Text("This analysis was interrupted before completing. Some results may be available.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            // Show what's available
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: hasClaudeResult ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(hasClaudeResult ? .green : .red)
+                    Text("Claude Analysis")
+                    Spacer()
+                }
+                
+                HStack {
+                    Image(systemName: hasGeminiResult ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(hasGeminiResult ? .green : .red)
+                    Text("Gemini Analysis")
+                    Spacer()
+                }
+                
+                HStack {
+                    Image(systemName: hasAppleResult ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(hasAppleResult ? .green : .red)
+                    Text("Apple Synthesis")
+                    Spacer()
+                }
+            }
+            .padding()
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(12)
+            .padding(.horizontal)
+            
+            Spacer()
+            
+            // Actions
+            VStack(spacing: 12) {
+                if hasClaudeResult || hasGeminiResult {
+                    Button {
+                        resumeAnalysis()
+                    } label: {
+                        Label("Resume Analysis", systemImage: "play.fill")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                }
+                
+                Button {
+                    restartAnalysis()
+                } label: {
+                    Label("Start Over", systemImage: "arrow.clockwise")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.gray.opacity(0.2))
+                        .foregroundColor(.primary)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+            }
+        }
+        .padding()
+        .navigationTitle("Incomplete Analysis")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func resumeAnalysis() {
+        // Load partial results into view model
+        queryViewModel.textQuery = record.queryText
+        queryViewModel.inputMode = .text
+        
+        if let claude = record.loadClaudeResult() {
+            queryViewModel.claudeResult = claude
+            queryViewModel.claudeComplete = true
+        }
+        
+        if let gemini = record.loadGeminiResult() {
+            queryViewModel.geminiResult = gemini
+            queryViewModel.geminiComplete = true
+        }
+        
+        if let apple = record.loadAppleResult() {
+            queryViewModel.appleResult = apple
+            queryViewModel.appleComplete = true
+        }
+        
+        // Set the current record so it updates in place
+        queryViewModel.currentQueryRecord = record
+        
+        // Trigger resume
+        Task {
+            await queryViewModel.resumeAnalysis()
+        }
+        
+        dismiss()
+    }
+    
+    private func restartAnalysis() {
+        queryViewModel.textQuery = record.queryText
+        queryViewModel.inputMode = .text
+        dismiss()
+    }
+}
+
 // MARK: - History Row View
 
 struct HistoryRowView: View {
@@ -171,9 +312,22 @@ struct HistoryRowView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(record.queryText)
-                .font(.subheadline.weight(.medium))
-                .lineLimit(2)
+            HStack {
+                Text(record.queryText)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(2)
+                
+                if !record.isComplete {
+                    Spacer()
+                    Text("INCOMPLETE")
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange)
+                        .cornerRadius(4)
+                }
+            }
             
             HStack(spacing: 12) {
                 // Timestamp
@@ -194,14 +348,16 @@ struct HistoryRowView: View {
                 
                 Spacer()
                 
-                // Risk indicator
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(riskColor)
-                        .frame(width: 6, height: 6)
-                    Text("\(Int(record.ibsProbabilityGemini * 100))%")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(riskColor)
+                // Risk indicator (only show if complete)
+                if record.isComplete {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(riskColor)
+                            .frame(width: 6, height: 6)
+                        Text("\(Int(record.ibsProbabilityGemini * 100))%")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(riskColor)
+                    }
                 }
             }
         }

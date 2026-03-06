@@ -37,6 +37,9 @@ final class FoodQueryRecord: Identifiable, Hashable {
     var appleResultJSON: String? = nil
     var claudeResultJSON: String? = nil
     var geminiResultJSON: String? = nil
+    
+    // Track completion status
+    var isComplete: Bool = false
 
     init(queryText: String, inputMode: String, servingInfo: String? = nil) {
         self.queryText = queryText
@@ -50,6 +53,7 @@ final class FoodQueryRecord: Identifiable, Hashable {
         self.ibsProbabilityGemini = gemini.ibsTriggerProbability
         self.ibsProbabilityApple = apple.finalIBSProbability
         self.geminiRationale = apple.synthesisRationale
+        self.isComplete = true
         
         // Encode full results as JSON
         let encoder = JSONEncoder()
@@ -72,6 +76,41 @@ final class FoodQueryRecord: Identifiable, Hashable {
                 let geminiData = try encoder.encode(geminiDTO)
                 self.geminiResultJSON = String(data: geminiData, encoding: .utf8)
             } catch {}
+        }
+    }
+    
+    // Save partial results (for incomplete analyses)
+    func savePartialResults(claude: AgentResult?, gemini: AgentResult?, apple: SynthesisResult?) {
+        let encoder = JSONEncoder()
+        
+        MainActor.assumeIsolated {
+            if let claude = claude {
+                self.ibsProbabilityClaude = claude.ibsTriggerProbability
+                let claudeDTO = AgentResultDTO.from(claude)
+                do {
+                    let claudeData = try encoder.encode(claudeDTO)
+                    self.claudeResultJSON = String(data: claudeData, encoding: .utf8)
+                } catch {}
+            }
+            
+            if let gemini = gemini {
+                self.ibsProbabilityGemini = gemini.ibsTriggerProbability
+                let geminiDTO = AgentResultDTO.from(gemini)
+                do {
+                    let geminiData = try encoder.encode(geminiDTO)
+                    self.geminiResultJSON = String(data: geminiData, encoding: .utf8)
+                } catch {}
+            }
+            
+            if let apple = apple {
+                self.ibsProbabilityApple = apple.finalIBSProbability
+                self.geminiRationale = apple.synthesisRationale
+                let appleDTO = SynthesisResultDTO.from(apple)
+                do {
+                    let appleData = try encoder.encode(appleDTO)
+                    self.appleResultJSON = String(data: appleData, encoding: .utf8)
+                } catch {}
+            }
         }
     }
     

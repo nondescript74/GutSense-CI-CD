@@ -117,6 +117,11 @@ final class AppleFoundationModelService: ObservableObject {
         let response = try await querySession.respond(to: prompt)
         let latencyMs = Int(Date().timeIntervalSince(startTime) * 1000)
 
+        // Debug: print raw response
+        print("🍎 Apple Intelligence raw response:")
+        print(response.content)
+        print("🍎 Response length: \(response.content.count)")
+        
         return parseSynthesisResponse(response.content, latencyMs: latencyMs)
     }
 
@@ -285,10 +290,22 @@ final class AppleFoundationModelService: ObservableObject {
 
     private func parseSynthesisResponse(_ text: String, latencyMs: Int) -> SynthesisResult {
         var cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Remove markdown code fences if present
         if cleaned.hasPrefix("```") {
-            let lines = cleaned.components(separatedBy: "\n")
-            cleaned = lines.dropFirst().dropLast().joined(separator: "\n")
+            // Remove opening fence (```json or ```)
+            if let firstNewline = cleaned.firstIndex(of: "\n") {
+                cleaned = String(cleaned[cleaned.index(after: firstNewline)...])
+            }
+            // Remove closing fence (```)
+            if let lastFence = cleaned.range(of: "```", options: .backwards) {
+                cleaned = String(cleaned[..<lastFence.lowerBound])
+            }
+            cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
         }
+        
+        print("🍎 Cleaned JSON for parsing:")
+        print(cleaned)
 
         guard let data = cleaned.data(using: .utf8) else {
             return fallbackSynthesisResult(reason: "Apple synthesis returned unexpected format.")
@@ -298,6 +315,7 @@ final class AppleFoundationModelService: ObservableObject {
         do {
             dto = try JSONDecoder().decode(SynthesisResultDTO.self, from: data)
         } catch {
+            print("🍎 JSON Decode Error: \(error)")
             return fallbackSynthesisResult(reason: "Apple synthesis returned unexpected format: \(error.localizedDescription)")
         }
 
