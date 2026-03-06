@@ -3,7 +3,11 @@
 // Reads/writes exclusively to iOS Keychain via KeychainService
 
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 // MARK: - Colour palette helpers
 
@@ -204,7 +208,14 @@ struct CredentialFieldRow: View {
 
                         // Paste button
                         Button {
+                            #if canImport(UIKit)
                             let clipboardString = UIPasteboard.general.string ?? ""
+                            #elseif canImport(AppKit)
+                            let clipboardString = NSPasteboard.general.string(forType: .string) ?? ""
+                            #else
+                            let clipboardString = ""
+                            #endif
+                            
                             print("📋 Clipboard content: '\(clipboardString)'")
                             if !clipboardString.isEmpty {
                                 fieldValue = clipboardString

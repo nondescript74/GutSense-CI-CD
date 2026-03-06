@@ -423,7 +423,9 @@ struct ExampleQueriesGrid: View {
 
 // MARK: - Barcode Scanner View (AVFoundation)
 
+#if !os(visionOS)
 import AVFoundation
+import AudioToolbox
 
 struct BarcodeScannerView: UIViewControllerRepresentable {
     let onScan: (String) -> Void
@@ -438,6 +440,7 @@ struct BarcodeScannerView: UIViewControllerRepresentable {
 final class BarcodeScannerVC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     let onScan: (String) -> Void
     var captureSession: AVCaptureSession?
+    var previewLayer: AVCaptureVideoPreviewLayer?
 
     init(onScan: @escaping (String) -> Void) {
         self.onScan = onScan
@@ -450,26 +453,52 @@ final class BarcodeScannerVC: UIViewController, AVCaptureMetadataOutputObjectsDe
         view.backgroundColor = .black
         setupCapture()
     }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        previewLayer?.frame = view.bounds
+    }
 
     private func setupCapture() {
         guard let device = AVCaptureDevice.default(for: .video),
-              let input = try? AVCaptureDeviceInput(device: device) else { return }
+              let input = try? AVCaptureDeviceInput(device: device) else { 
+            print("⚠️ Failed to get camera device or input")
+            return 
+        }
 
         let session = AVCaptureSession()
+        session.beginConfiguration()
+        
+        guard session.canAddInput(input) else {
+            print("⚠️ Cannot add camera input")
+            return
+        }
         session.addInput(input)
 
         let output = AVCaptureMetadataOutput()
+        guard session.canAddOutput(output) else {
+            print("⚠️ Cannot add metadata output")
+            return
+        }
         session.addOutput(output)
+        
         output.setMetadataObjectsDelegate(self, queue: .main)
-        output.metadataObjectTypes = [.ean8, .ean13, .upce, .qr, .dataMatrix]
+        output.metadataObjectTypes = [.ean8, .ean13, .upce, .qr, .dataMatrix, .code39, .code128]
+        
+        session.commitConfiguration()
 
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.frame = view.bounds
         preview.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(preview)
-
+        view.layer.insertSublayer(preview, at: 0)
+        
+        previewLayer = preview
         captureSession = session
-        DispatchQueue.global(qos: .userInitiated).async { session.startRunning() }
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            session.startRunning()
+            print("📷 Camera session started")
+        }
     }
 
     func metadataOutput(_ output: AVCaptureMetadataOutput,
@@ -477,7 +506,40 @@ final class BarcodeScannerVC: UIViewController, AVCaptureMetadataOutputObjectsDe
                         from connection: AVCaptureConnection) {
         guard let obj = objects.first as? AVMetadataMachineReadableCodeObject,
               let code = obj.stringValue else { return }
+        print("✅ Barcode detected: \(code)")
+        
+        AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
+        
         captureSession?.stopRunning()
-        onScan(code)
+        DispatchQueue.main.async {
+            self.onScan(code)
+        }
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        captureSession?.stopRunning()
     }
 }
+#else
+// visionOS fallback - barcode scanning not available
+struct BarcodeScannerView: View {
+    let onScan: (String) -> Void
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "barcode.viewfinder")
+                .font(.system(size: 60))
+                .foregroundColor(.secondary)
+            Text("Barcode scanning is not available on visionOS")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+            Text("Please use text input or photo mode instead")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+    }
+}
+#endif

@@ -16,7 +16,9 @@
 import SwiftUI
 import Combine
 import PhotosUI
+#if !os(visionOS)
 import AVFoundation
+#endif
 import SwiftData
 
 // MARK: - Query Input Mode
