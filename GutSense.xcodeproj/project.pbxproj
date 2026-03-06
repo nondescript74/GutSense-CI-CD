@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F847CFEC2F5B58270047F285 /* FeedbackView_Hookup.md in Resources */ = {isa = PBXBuildFile; fileRef = F847CFEB2F5B58270047F285 /* FeedbackView_Hookup.md */; };
 		F8F1BAF22F59E354009C2630 /* XCODE_SETUP.md in Resources */ = {isa = PBXBuildFile; fileRef = F8F1BAF12F59E354009C2630 /* XCODE_SETUP.md */; };
 		F8F1BB442F5A20A7009C2630 /* StrongGutAppClip.app in Embed App Clips */ = {isa = PBXBuildFile; fileRef = F8F1BB202F5A20A5009C2630 /* StrongGutAppClip.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -62,6 +63,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F847CFEB2F5B58270047F285 /* FeedbackView_Hookup.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FeedbackView_Hookup.md; sourceTree = "<group>"; };
 		F8F1A4832F59DDA7009C2630 /* GutSense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GutSense.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8F1A4922F59DDA9009C2630 /* GutSenseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GutSenseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8F1A49C2F59DDA9009C2630 /* GutSenseUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GutSenseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -91,6 +93,7 @@
 			membershipExceptions = (
 				BackendAPIService.swift,
 				DomainModels.swift,
+				FeedbackView.swift,
 				FoundationModelAvailability.swift,
 				KeychainService.swift,
 				Models.swift,
@@ -184,6 +187,7 @@
 		F8F1A47A2F59DDA7009C2630 = {
 			isa = PBXGroup;
 			children = (
+				F847CFEB2F5B58270047F285 /* FeedbackView_Hookup.md */,
 				F8F1A4AF2F59E29B009C2630 /* Docs */,
 				F8F1A4852F59DDA7009C2630 /* GutSense */,
 				F8F1A4952F59DDA9009C2630 /* GutSenseTests */,
@@ -399,6 +403,7 @@
 		F8F1A4812F59DDA7009C2630 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				F847CFEC2F5B58270047F285 /* FeedbackView_Hookup.md in Resources */,
 				F8F1BAF22F59E354009C2630 /* XCODE_SETUP.md in Resources */,
 			);
 		};
@@ -615,7 +620,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = GutSense/GutSense.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = YKHW2TJ32G;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -648,14 +653,14 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Debug;
@@ -668,7 +673,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = GutSense/GutSense.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = YKHW2TJ32G;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -701,14 +706,14 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Release;
@@ -779,12 +784,13 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = GutSense;
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
@@ -804,12 +810,13 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = GutSense;
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
@@ -822,7 +829,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StrongGutAppClip/StrongGutAppClip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = YKHW2TJ32G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -865,7 +872,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StrongGutAppClip/StrongGutAppClip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = YKHW2TJ32G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

@@ -790,6 +790,8 @@ struct ThreePaneResultsView: View {
     let geminiResult: SynthesisResult
     var servingInfo: String? = nil
     @ObservedObject var appleService: AppleFoundationModelService
+    
+    @State private var showFeedback = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -828,6 +830,18 @@ struct ThreePaneResultsView: View {
                     // Top: Gemini Synthesis (most important - synthesized result)
                     GeminiSynthesisPane(result: geminiResult)
                         .frame(minHeight: 240)
+                    
+                    // Feedback button
+                    Button {
+                        showFeedback = true
+                    } label: {
+                        Label("Rate this analysis", systemImage: "hand.thumbsup")
+                            .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(.ultraThinMaterial, in: Capsule())
+                    }
+                    .padding(.top, 8)
 
                     // Bottom row: Apple | Claude (supporting details)
                     GeometryReader { geo in
@@ -846,7 +860,28 @@ struct ThreePaneResultsView: View {
         }
         .navigationTitle("GutSense Analysis")
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $showFeedback) {
+            FeedbackView(
+                foodItem: query,
+                backendURL: "https://web-production-825a4.up.railway.app",
+                onDismiss: { showFeedback = false }
+            )
+            .background(ClearBackgroundView())
+        }
     }
+}
+
+// MARK: - Clear Background Helper
+
+struct ClearBackgroundView: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        DispatchQueue.main.async {
+            view.superview?.superview?.backgroundColor = .clear
+        }
+        return view
+    }
+    func updateUIView(_ uiView: UIView, context: Context) {}
 }
 
 // MARK: - Preview

@@ -421,3 +421,12 @@ struct ThanksView: View {
      .background(ClearBackgroundView()) // pass-through for frosted effect
  }
 */
+
+
+#Preview {
+    FeedbackView(
+        foodItem: "Garlic bread with olive oil",
+        backendURL: "https://web-production-825a4.up.railway.app",
+        onDismiss: {}
+    )
+}
