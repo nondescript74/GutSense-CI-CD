@@ -305,31 +305,126 @@ final class QueryViewModel: ObservableObject {
 
     private func encodeAgentResult(_ result: AgentResult) -> String? {
         // Encode agent result to JSON string for synthesis
+        // Must match the backend's AgentResultDTO structure exactly
+        
+        struct FodmapTierExport: Encodable {
+            let ingredient: String
+            let tier: String
+            let source: String
+            let fructan_g: Double?
+            let gos_g: Double?
+            let lactose_g: Double?
+            let fructose_g: Double?
+            let polyol_g: Double?
+            let serving_size_g: Double
+        }
+        
+        struct BioavailabilityExport: Encodable {
+            let nutrient: String
+            let raw_percent: Double
+            let cooked_percent: Double
+            let note: String
+        }
+        
+        struct EnzymeExport: Encodable {
+            let name: String
+            let brand: String
+            let targets: String
+            let dose: String
+            let temperature_warning: Bool
+            let notes: String
+        }
+        
+        struct CitationExport: Encodable {
+            let title: String
+            let source: String
+            let confidence_tier: String
+            let url: String?
+        }
+        
+        struct SafetyFlagExport: Encodable {
+            let message: String
+            let severity: String
+        }
+        
         struct AgentExport: Encodable {
             let agent_type: String
-            let fodmap_tiers: [[String: String]]
+            let fodmap_tiers: [FodmapTierExport]
             let ibs_trigger_probability: Double
             let confidence_tier: String
+            let confidence_interval: Double
+            let bioavailability: [BioavailabilityExport]
+            let enzyme_recommendations: [EnzymeExport]
+            let citations: [CitationExport]
+            let personalized_risk_delta: Double
             let total_fructan_g: Double
             let total_gos_g: Double
+            let safety_flags: [SafetyFlagExport]
+            let processing_latency_ms: Int
         }
 
         let export = AgentExport(
             agent_type: result.agentType.rawValue,
             fodmap_tiers: result.fodmapTiers.map { item in
-                var d: [String: String] = [
-                    "ingredient": item.ingredient,
-                    "tier": item.tier.rawValue.lowercased(),
-                    "source": item.source
-                ]
-                if let f = item.fructanG { d["fructan_g"] = String(f) }
-                if let g = item.gosG     { d["gos_g"] = String(g) }
-                return d
+                FodmapTierExport(
+                    ingredient: item.ingredient,
+                    tier: item.tier.rawValue.lowercased(),
+                    source: item.source,
+                    fructan_g: item.fructanG,
+                    gos_g: item.gosG,
+                    lactose_g: item.lactoseG,
+                    fructose_g: item.fructoseG,
+                    polyol_g: item.polyolG,
+                    serving_size_g: item.servingSizeG
+                )
             },
             ibs_trigger_probability: result.ibsTriggerProbability,
-            confidence_tier: result.confidenceTier.rawValue,
+            confidence_tier: result.confidenceTier.rawValue.lowercased()
+                .replacingOccurrences(of: " ", with: "-"),
+            confidence_interval: result.confidenceInterval,
+            bioavailability: result.bioavailability.map { bio in
+                BioavailabilityExport(
+                    nutrient: bio.nutrient,
+                    raw_percent: bio.rawPercent,
+                    cooked_percent: bio.cookedPercent,
+                    note: bio.note
+                )
+            },
+            enzyme_recommendations: result.enzymeRecommendations.map { enzyme in
+                EnzymeExport(
+                    name: enzyme.name,
+                    brand: enzyme.brand,
+                    targets: enzyme.targets,
+                    dose: enzyme.dose,
+                    temperature_warning: enzyme.temperatureWarning,
+                    notes: enzyme.notes
+                )
+            },
+            citations: result.citations.map { citation in
+                CitationExport(
+                    title: citation.title,
+                    source: citation.source,
+                    confidence_tier: citation.confidenceTier.rawValue.lowercased()
+                        .replacingOccurrences(of: " ", with: "-"),
+                    url: citation.url
+                )
+            },
+            personalized_risk_delta: result.personalizedRiskDelta,
             total_fructan_g: result.totalFructanG,
-            total_gos_g: result.totalGOSG
+            total_gos_g: result.totalGOSG,
+            safety_flags: result.safetyFlags.map { flag in
+                SafetyFlagExport(
+                    message: flag.message,
+                    severity: {
+                        switch flag.severity {
+                        case .critical: return "critical"
+                        case .warning: return "warning"
+                        case .info: return "info"
+                        }
+                    }()
+                )
+            },
+            processing_latency_ms: result.processingLatencyMs
         )
 
         guard let data = try? JSONEncoder().encode(export) else { return nil }
