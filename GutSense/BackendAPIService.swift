@@ -29,6 +29,8 @@ struct UserProfileDTO: Codable {
     let known_safe_foods: [String]
     let medications: [String]
     let diagnosed_conditions: [String]
+    let sensitivities: [String]?
+    let ai_notes: String?
 }
 
 struct UserSourceDTO: Codable {
@@ -381,7 +383,9 @@ final class BackendAPIService: ObservableObject {
                 known_triggers: profile.knownTriggers.map { $0.rawValue },
                 known_safe_foods: profile.knownSafeFoods,
                 medications: profile.medications,
-                diagnosed_conditions: profile.diagnosedConditions
+                diagnosed_conditions: profile.diagnosedConditions,
+                sensitivities: profile.sensitivities.isEmpty ? nil : profile.sensitivities,
+                ai_notes: profile.aiNotes.isEmpty ? nil : profile.aiNotes
             ),
             user_sources: sources.map {
                 UserSourceDTO(title: $0.title, raw_text: $0.rawText,

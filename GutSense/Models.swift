@@ -192,6 +192,15 @@ final class UserProfileRecord {
     var medications: [String] = []
     var diagnosedConditions: [String] = []
 
+    /// Broad sensitivity categories: FODMAP, Wheat, Gluten, Nuts
+    var sensitivities: [String] = []
+
+    /// Free-form notes discovered by the AI profiling agent
+    var aiNotes: String = ""
+
+    /// JSON-encoded chat transcript from the AI profiling session
+    var chatTranscriptJSON: String = ""
+
     init() {}
 
     func toModel() -> UserProfile {
@@ -202,6 +211,8 @@ final class UserProfileRecord {
         p.knownSafeFoods = knownSafeFoods
         p.medications = medications
         p.diagnosedConditions = diagnosedConditions
+        p.sensitivities = sensitivities
+        p.aiNotes = aiNotes
         return p
     }
 }
@@ -239,6 +250,8 @@ struct UserProfile {
     var knownSafeFoods: [String] = []
     var medications: [String] = []
     var diagnosedConditions: [String] = ["IBS"]
+    var sensitivities: [String] = []
+    var aiNotes: String = ""
 }
 
 struct UserSource {

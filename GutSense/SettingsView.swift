@@ -15,7 +15,7 @@ struct SettingsView: View {
                     NavigationLink("API Keys & Passwords", destination: APIKeysView())
                 }
                 Section("Profile") {
-                    NavigationLink("IBS Profile & Triggers", destination: Text("Onboarding — coming next"))
+                    NavigationLink("IBS Profile & Triggers", destination: IBSProfileView())
                 }
                 Section("About") {
                     LabeledContent("Version", value: "1.0.0")
