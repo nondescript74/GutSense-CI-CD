@@ -7,6 +7,13 @@
 
 import Foundation
 
-// MARK: - Agent Types
+// MARK: - Safety Flags
 
+enum FlagSeverity: String, Equatable, Sendable {
+    case info
+    case warning
+    case critical
+}
+
+// MARK: - Agent Types
 

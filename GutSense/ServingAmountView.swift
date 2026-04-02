@@ -119,6 +119,7 @@ struct ServingAmountView: View {
                     .font(.caption)
                     .toggleStyle(.button)
                     .tint(.accentColor)
+                    .accessibilityIdentifier("servingExactGrams.toggle")
 
                 if vm.useCustomGrams {
                     HStack(spacing: 4) {
@@ -130,11 +131,15 @@ struct ServingAmountView: View {
                             .padding(.vertical, 6)
                             .background(Color(.secondarySystemBackground))
                             .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .accessibilityIdentifier("servingExactGrams.field")
+                            .accessibilityLabel("servingExactGrams.field")
                         Text("g")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     .transition(.move(edge: .leading).combined(with: .opacity))
+                    .accessibilityIdentifier("servingExactGrams.container")
+                    .accessibilityElement(children: .contain)
                 }
 
                 Spacer()

@@ -14,6 +14,9 @@ struct SettingsView: View {
                 Section("Credentials") {
                     NavigationLink("API Keys & Passwords", destination: APIKeysView())
                 }
+                Section("Providers") {
+                    NavigationLink("Primary Provider", destination: APIKeysView())
+                }
                 Section("Profile") {
                     NavigationLink("IBS Profile & Triggers", destination: IBSProfileView())
                 }

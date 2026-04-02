@@ -5,13 +5,13 @@
 //  Created by Zahirudeen Premji on 3/5/26.
 //
 
-
 // GutSense — AppleFoundationModelService.swift
 // iOS 18 Apple Foundation Models (Apple Intelligence) — on-device FODMAP analysis
 // Requires: iOS 18+, Apple Intelligence enabled, iPhone 15 Pro or M-series iPad
 // Framework: FoundationModels (WWDC 2025)
 
 import Foundation
+import OSLog
 import Combine
 import FoundationModels  // iOS 18 — Apple Intelligence framework
 
@@ -29,30 +29,119 @@ enum FoundationModelAvailability {
 @MainActor
 final class AppleFoundationModelService: ObservableObject {
     static let shared = AppleFoundationModelService()
+    private static let logger = Logger(subsystem: "com.yourcompany.GutSense", category: "AppleFoundationModelService")
 
     @Published var availability: FoundationModelAvailability = .modelNotReady
+    
+    // MARK: - Key Verification
+    // Replace the key name with the actual one you use to store Apple Intelligence/Foundation Models access key if applicable.
+    // For parity with ChatGPT key handling, we verify presence and basic shape.
+    private enum KeySource {
+        case infoPlist(String)
+        case environment(String)
+    }
+
+    // Configure the list of required keys here. Adjust names to match your project settings.
+    private let requiredKeys: [KeySource] = [
+        .infoPlist("APPLE_FOUNDATION_MODEL_KEY")
+    ]
+
+    private func readValue(for source: KeySource) -> String? {
+        switch source {
+        case .infoPlist(let key):
+            return Bundle.main.object(forInfoDictionaryKey: key) as? String
+        case .environment(let name):
+            return ProcessInfo.processInfo.environment[name]
+        }
+    }
+
+    private func verifyKeys() -> Bool {
+        var ok = true
+        for source in requiredKeys {
+            let value = readValue(for: source)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let name: String
+            switch source {
+            case .infoPlist(let key): name = key
+            case .environment(let env): name = env
+            }
+            if let value, !value.isEmpty {
+                // Basic shape check: length >= 8 (adjust to your actual key format as needed)
+                if value.count < 8 {
+                    Self.logger.error("🔑 Key \(name, privacy: .public) present but appears malformed (too short)")
+                    ok = false
+                } else {
+                    Self.logger.debug("🔑 Key \(name, privacy: .public) verified present")
+                }
+            } else {
+                Self.logger.error("🔑 Missing required key: \(name, privacy: .public)")
+                ok = false
+            }
+        }
+        return ok
+    }
+    
+    // Detect if the current process is running as root (UID 0)
+    private static var isRunningAsRoot: Bool {
+        #if canImport(Darwin)
+        return geteuid() == 0
+        #else
+        return false
+        #endif
+    }
+
+    // Lazily create the model to avoid initializing when running as root (unsupported)
+    private lazy var model: SystemLanguageModel? = {
+        if Self.isRunningAsRoot {
+            return nil
+        }
+        return SystemLanguageModel.default
+    }()
 
     private var session: LanguageModelSession?
-    private let model = SystemLanguageModel.default
 
     private init() {
+        Self.logger.log("Initializing AppleFoundationModelService…")
         Task { await checkAvailability() }
     }
 
     // MARK: - Availability
 
     func checkAvailability() async {
+        guard verifyKeys() else {
+            availability = .modelNotReady
+            session = nil
+            Self.logger.error("❌ Key verification failed. Skipping model initialization.")
+            return
+        }
+        // If running as root, the Foundation Models framework will refuse to initialize.
+        if Self.isRunningAsRoot {
+            availability = .modelNotReady
+            session = nil
+            Self.logger.error("❌ Running as root is unsupported. Skipping model initialization.")
+            return
+        }
+
+        guard let model else {
+            availability = .modelNotReady
+            session = nil
+            return
+        }
+
         switch model.availability {
         case .available:
             availability = .available
             // Warm up session
             session = LanguageModelSession(model: model)
+            Self.logger.log("✅ Foundation Model available. Session warmed up.")
         case .unavailable(.appleIntelligenceNotEnabled):
             availability = .appleIntelligenceDisabled
+            Self.logger.warning("⚠️ Apple Intelligence not enabled.")
         case .unavailable(.deviceNotEligible):
             availability = .deviceNotSupported
+            Self.logger.warning("⚠️ Device not eligible for Foundation Models.")
         default:
             availability = .modelNotReady
+            Self.logger.warning("⚠️ Foundation Model not ready (unknown reason).")
         }
     }
 
@@ -66,8 +155,14 @@ final class AppleFoundationModelService: ObservableObject {
         sources: [UserSource] = []
     ) async throws -> AgentResult {
 
+        if !isAvailable { Self.logger.warning("Analyze requested while unavailable: \(self.unavailabilityMessage, privacy: .public)") }
+
         guard isAvailable else {
             // Return a graceful degraded result so the UI still shows 2/3 panes
+            return fallbackResult(reason: unavailabilityMessage)
+        }
+
+        guard let model else {
             return fallbackResult(reason: unavailabilityMessage)
         }
 
@@ -78,10 +173,12 @@ final class AppleFoundationModelService: ObservableObject {
         )
 
         let prompt = buildPrompt(query: query, profile: profile, sources: sources)
+        Self.logger.log("➡️ Sending analysis prompt (length: \(prompt.count))")
 
         let startTime = Date()
         let response = try await querySession.respond(to: prompt)
         let latencyMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        Self.logger.log("⬅️ Received analysis response (length: \(response.content.count)) in \(latencyMs) ms")
 
         return parseResponse(response.content, latencyMs: latencyMs, profile: profile)
     }
@@ -96,7 +193,13 @@ final class AppleFoundationModelService: ObservableObject {
         geminiJSON: String
     ) async throws -> SynthesisResult {
 
+        if !isAvailable { Self.logger.warning("Synthesis requested while unavailable: \(self.unavailabilityMessage, privacy: .public)") }
+
         guard isAvailable else {
+            return fallbackSynthesisResult(reason: unavailabilityMessage)
+        }
+
+        guard let model else {
             return fallbackSynthesisResult(reason: unavailabilityMessage)
         }
 
@@ -112,10 +215,12 @@ final class AppleFoundationModelService: ObservableObject {
             profile: profile,
             sources: sources
         )
+        Self.logger.log("➡️ Sending synthesis prompt (length: \(prompt.count))")
 
         let startTime = Date()
         let response = try await querySession.respond(to: prompt)
         let latencyMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        Self.logger.log("⬅️ Received synthesis response (length: \(response.content.count)) in \(latencyMs) ms")
 
         // Debug: print raw response
         print("🍎 Apple Intelligence raw response:")
@@ -192,6 +297,7 @@ final class AppleFoundationModelService: ObservableObject {
         }
 
         guard let data = cleaned.data(using: .utf8) else {
+            Self.logger.error("❌ Analysis parse failed: response not UTF-8 data")
             return fallbackResult(reason: "Apple model returned unexpected format.")
         }
         
@@ -199,6 +305,7 @@ final class AppleFoundationModelService: ObservableObject {
         do {
             dto = try JSONDecoder().decode(AgentResultDTO.self, from: data)
         } catch {
+            Self.logger.error("❌ Analysis JSON decode error: \(String(describing: error), privacy: .public)")
             // Graceful parse failure — return a flagged result
             return fallbackResult(reason: "Apple model returned unexpected format.")
         }
@@ -308,6 +415,7 @@ final class AppleFoundationModelService: ObservableObject {
         print(cleaned)
 
         guard let data = cleaned.data(using: .utf8) else {
+            Self.logger.error("❌ Synthesis parse failed: response not UTF-8 data")
             return fallbackSynthesisResult(reason: "Apple synthesis returned unexpected format.")
         }
 
@@ -315,7 +423,7 @@ final class AppleFoundationModelService: ObservableObject {
         do {
             dto = try JSONDecoder().decode(SynthesisResultDTO.self, from: data)
         } catch {
-            print("🍎 JSON Decode Error: \(error)")
+            Self.logger.error("❌ Synthesis JSON decode error: \(String(describing: error), privacy: .public)")
             return fallbackSynthesisResult(reason: "Apple synthesis returned unexpected format: \(error.localizedDescription)")
         }
 
@@ -331,6 +439,10 @@ final class AppleFoundationModelService: ObservableObject {
         case .deviceNotSupported:
             return "Apple Foundation Models require iPhone 15 Pro / M-series iPad."
         default:
+            if Self.isRunningAsRoot {
+                Self.logger.error("❌ Unavailable because process is root")
+                return "Apple Foundation Model not available (process is running as root, which is unsupported)."
+            }
             return "Apple Foundation Model not available on this device."
         }
     }

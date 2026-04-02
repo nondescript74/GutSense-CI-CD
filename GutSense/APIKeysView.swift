@@ -45,8 +45,8 @@ struct ReadinessBanner: View {
                     .foregroundColor(store.isReadyForAnalysis ? .gutGreen : .gutAmber)
 
                 Text(store.isReadyForAnalysis
-                     ? "Claude, Gemini, and Backend are configured."
-                     : "Anthropic key, Gemini key, and Backend URL required.")
+                     ? "\(store.primaryProvider.label), Gemini, and Backend are configured."
+                     : "\(store.primaryProvider.label) key, Gemini key, and Backend URL required.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -82,27 +82,17 @@ struct CredentialFieldRow: View {
     @State private var isRevealed: Bool = true  // Default to revealed for easier pasting
     @State private var saveSuccess: Bool = false
     @State private var isValidating: Bool = false
-    @State private var validationResult: ValidationResult? = nil
+    @State private var isValidatingOpenAI: Bool = false
+    @State private var validationResult: CredentialValidationResult? = nil
     @State private var justPasted: Bool = false
     @FocusState private var fieldFocused: Bool
     
-    enum ValidationResult {
-        case success(String)
-        case failure(String)
-        
-        var isSuccess: Bool {
-            if case .success = self { return true }
-            return false
-        }
-    }
-
     private var serviceColor: Color {
         Color.hex(definition.service.tintColor)
     }
     
     private func canValidate(_ def: CredentialDefinition) -> Bool {
-        // Only validate backend URL for now
-        def.id == "gutsense.backend_url"
+        CredentialValidator.canValidate(def)
     }
     
     private func validateCredential(_ def: CredentialDefinition) {
@@ -111,11 +101,11 @@ struct CredentialFieldRow: View {
             return
         }
         
-        isValidating = true
-        validationResult = nil
-        
-        Task {
-            if def.id == "gutsense.backend_url" {
+        if def.id == "gutsense.backend_url" {
+            isValidating = true
+            validationResult = nil
+            
+            Task {
                 // Test backend health endpoint
                 let success = await BackendAPIService.shared.healthCheck()
                 await MainActor.run {
@@ -126,19 +116,30 @@ struct CredentialFieldRow: View {
                         validationResult = .failure("Backend unreachable - check URL")
                     }
                 }
-            } else {
-                // Basic format validation for API keys
+            }
+        } else if def.id == "openai.api_key" {
+            isValidating = true
+            validationResult = nil
+            
+            Task {
+                let ok = await CredentialsStore.shared.validateOpenAIKey()
                 await MainActor.run {
                     isValidating = false
-                    if def.id == "anthropic.api_key" {
-                        validationResult = value.hasPrefix("sk-ant-") ? 
-                            .success("Format valid ✓") : 
-                            .failure("Should start with sk-ant-")
-                    } else if def.id == "gemini.api_key" {
-                        validationResult = value.hasPrefix("AIza") ? 
-                            .success("Format valid ✓") : 
-                            .failure("Should start with AIza")
+                    validationResult = ok ? .success("OpenAI key verified ✓") : .failure("OpenAI key invalid — check and try again")
+                }
+            }
+        } else {
+            // Basic format validation for API keys
+            isValidating = true
+            validationResult = nil
+            Task {
+                await MainActor.run {
+                    if let result = CredentialValidator.formatValidationResult(for: def, value: value) {
+                        validationResult = result
+                    } else {
+                        validationResult = .failure("No validation available")
                     }
+                    isValidating = false
                 }
             }
         }
@@ -472,7 +473,18 @@ struct ServiceSection: View {
 
                 VStack(spacing: 12) {
                     ForEach(credentials) { cred in
-                        CredentialFieldRow(definition: cred, store: store)
+                        VStack(alignment: .leading, spacing: 6) {
+                            CredentialFieldRow(definition: cred, store: store)
+                            if cred.id == "openai.api_key" && store.isSaved(cred) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: store.openAIKeyValid ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                                        .foregroundColor(store.openAIKeyValid ? .gutGreen : .gutAmber)
+                                    Text(store.openAIKeyValid ? "Verified with OpenAI" : "Not verified — tap shield to verify")
+                                        .font(.caption)
+                                        .foregroundColor(store.openAIKeyValid ? .gutGreen : .gutAmber)
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(14)
@@ -620,7 +632,7 @@ struct APIKeysView: View {
     @State private var showAddCustom = false
     @State private var showSecurityInfo = false
 
-    private let coreServices: [ServiceIdentifier] = [.anthropic, .gemini, .gutsenseAPI, .monash]
+    private let coreServices: [ServiceIdentifier] = [.anthropic, .openai, .gemini, .gutsenseAPI, .monash]
 
     var body: some View {
         NavigationStack {
@@ -653,6 +665,35 @@ struct APIKeysView: View {
                         .padding(.horizontal)
                     }
                     .buttonStyle(.plain)
+
+                    // Primary Provider section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Primary Provider")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 14)
+                        
+                        Picker("Primary Provider", selection: $store.primaryProvider) {
+                            ForEach(PrimaryProvider.allCases) { p in
+                                Text(p.label).tag(p)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, 14)
+                        
+                        Text("This controls which provider powers the left analysis pane (Claude/OpenAI).")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 10)
+                    }
+                    .background(Color(.systemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.gray.opacity(0.15))
+                    )
+                    .padding(.horizontal)
 
                     // Core service sections
                     VStack(spacing: 12) {

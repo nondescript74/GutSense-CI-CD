@@ -217,19 +217,33 @@ final class QueryViewModel: ObservableObject {
 
     private func runClaudeAgent() async {
         do {
-            let result = try await backendService.analyzeClaude(
-                query: resolvedQuery,
-                profile: userProfile,
-                sources: userSources,
-                serving: servingViewModel,
-                image: capturedImage
-            )
+            let result: AgentResult
+            switch credentialsStore.primaryProvider {
+            case .anthropic:
+                result = try await backendService.analyzeClaude(
+                    query: resolvedQuery,
+                    profile: userProfile,
+                    sources: userSources,
+                    serving: servingViewModel,
+                    image: capturedImage
+                )
+            case .openai:
+                result = try await backendService.analyzeOpenAI(
+                    query: resolvedQuery,
+                    profile: userProfile,
+                    sources: userSources,
+                    serving: servingViewModel,
+                    image: capturedImage
+                )
+            }
             claudeResult = result
             claudeComplete = true
             savePartialResults()
         } catch {
             claudeError = error.localizedDescription
-            claudeResult = AgentResult.error(for: .claude, message: error.localizedDescription)
+            // Preserve pane semantics but set an error result with the selected provider type
+            let agentType: AgentType = (credentialsStore.primaryProvider == .openai) ? .openai : .claude
+            claudeResult = AgentResult.error(for: agentType, message: error.localizedDescription)
             claudeComplete = true
             savePartialResults()
         }
@@ -606,3 +620,4 @@ extension UserProfile {
         UserProfile()
     }
 }
+

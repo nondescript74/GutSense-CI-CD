@@ -37,8 +37,42 @@ struct CredentialDefinition: Identifiable, Hashable {
     let validationHint: String?     // e.g. "Starts with sk-ant-"
 }
 
+enum CredentialValidationResult: Equatable {
+    case success(String)
+    case failure(String)
+
+    var isSuccess: Bool {
+        if case .success = self { return true }
+        return false
+    }
+}
+
+struct CredentialValidator {
+    static func canValidate(_ definition: CredentialDefinition) -> Bool {
+        if definition.id == "gutsense.backend_url" || definition.id == "openai.api_key" {
+            return true
+        }
+        return definition.validationHint != nil
+    }
+
+    static func formatValidationResult(
+        for definition: CredentialDefinition,
+        value: String
+    ) -> CredentialValidationResult? {
+        guard let hint = definition.validationHint else { return nil }
+        let marker = "Starts with "
+        guard hint.hasPrefix(marker) else { return nil }
+        let prefix = String(hint.dropFirst(marker.count))
+        guard !prefix.isEmpty else { return nil }
+        return value.hasPrefix(prefix)
+            ? .success("Format valid")
+            : .failure("Should start with \(prefix)")
+    }
+}
+
 enum ServiceIdentifier: String, CaseIterable, Identifiable {
     case anthropic    = "Anthropic"
+    case openai       = "OpenAI"
     case gemini       = "Google Gemini"
     case gutsenseAPI  = "GutSense Backend"
     case monash       = "Monash FODMAP"
@@ -49,6 +83,7 @@ enum ServiceIdentifier: String, CaseIterable, Identifiable {
     var iconName: String {
         switch self {
         case .anthropic:   return "sparkles"
+        case .openai:      return "o.circle.fill"
         case .gemini:      return "brain.head.profile"
         case .gutsenseAPI: return "server.rack"
         case .monash:      return "cross.case.fill"
@@ -59,6 +94,7 @@ enum ServiceIdentifier: String, CaseIterable, Identifiable {
     var tintColor: String {  // Hex strings for cross-view use
         switch self {
         case .anthropic:   return "#C97B47"
+        case .openai:      return "#10A37F"
         case .gemini:      return "#4285F4"
         case .gutsenseAPI: return "#34C759"
         case .monash:      return "#AF52DE"
@@ -79,6 +115,19 @@ enum ServiceIdentifier: String, CaseIterable, Identifiable {
                     helpText: "Found at console.anthropic.com → API Keys",
                     required: true,
                     validationHint: "Starts with sk-ant-"
+                )
+            ]
+        case .openai:
+            return [
+                CredentialDefinition(
+                    id: "openai.api_key",
+                    service: .openai,
+                    label: "API Key",
+                    placeholder: "sk-...",
+                    isPassword: true,
+                    helpText: "Found at platform.openai.com → API keys",
+                    required: true,
+                    validationHint: "Starts with sk-"
                 )
             ]
         case .gemini:
@@ -142,6 +191,21 @@ enum ServiceIdentifier: String, CaseIterable, Identifiable {
             ]
         case .custom:
             return []  // Dynamically added by user
+        }
+    }
+}
+
+// MARK: - Primary Provider Enum
+
+enum PrimaryProvider: String, CaseIterable, Identifiable, Codable {
+    case anthropic
+    case openai
+
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .anthropic: return "Anthropic"
+        case .openai: return "OpenAI"
         }
     }
 }
@@ -275,9 +339,27 @@ final class CredentialsStore: ObservableObject {
     // Validation state
     @Published var validationErrors: [String: String] = [:]
 
+    // OpenAI key validation state
+    @Published var openAIKeyValid: Bool = false {
+        didSet {
+            UserDefaults.standard.set(openAIKeyValid, forKey: "openai.key.valid")
+        }
+    }
+
+    @Published var primaryProvider: PrimaryProvider = .anthropic {
+        didSet {
+            UserDefaults.standard.set(primaryProvider.rawValue, forKey: "gutsense.primary_provider")
+        }
+    }
+
     private init() {
         refreshSavedKeys()
         loadCustomServices()
+        openAIKeyValid = UserDefaults.standard.bool(forKey: "openai.key.valid")
+        if let raw = UserDefaults.standard.string(forKey: "gutsense.primary_provider"),
+           let provider = PrimaryProvider(rawValue: raw) {
+            primaryProvider = provider
+        }
     }
 
     func refreshSavedKeys() {
@@ -320,6 +402,10 @@ final class CredentialsStore: ObservableObject {
 
         do {
             try keychain.save(value.trimmingCharacters(in: .whitespaces), for: definition.id)
+            if definition.id == "openai.api_key" {
+                // Require re-validation after key change
+                openAIKeyValid = false
+            }
             savedKeys.insert(definition.id)
             return true
         } catch {
@@ -331,6 +417,9 @@ final class CredentialsStore: ObservableObject {
     func delete(for definition: CredentialDefinition) {
         try? keychain.delete(for: definition.id)
         savedKeys.remove(definition.id)
+        if definition.id == "openai.api_key" {
+            openAIKeyValid = false
+        }
     }
 
     func masked(for definition: CredentialDefinition) -> String {
@@ -345,6 +434,9 @@ final class CredentialsStore: ObservableObject {
 
     var anthropicAPIKey: String? { 
         try? keychain.read(for: "anthropic.api_key") 
+    }
+    var openAIApiKey: String? {
+        try? keychain.read(for: "openai.api_key")
     }
     var geminiAPIKey: String? { 
         try? keychain.read(for: "gemini.api_key") 
@@ -362,8 +454,39 @@ final class CredentialsStore: ObservableObject {
         try? keychain.read(for: "gutsense.api_secret") 
     }
 
+    var selectedPrimaryAPIKey: String? {
+        primaryProvider == .anthropic ? anthropicAPIKey : openAIApiKey
+    }
+
     var isReadyForAnalysis: Bool {
-        anthropicAPIKey != nil && geminiAPIKey != nil && backendURL != nil
+        switch primaryProvider {
+        case .anthropic:
+            return anthropicAPIKey != nil && geminiAPIKey != nil && backendURL != nil
+        case .openai:
+            return openAIApiKey != nil && openAIKeyValid && geminiAPIKey != nil && backendURL != nil
+        }
+    }
+    
+    // MARK: OpenAI Key Validation
+    func validateOpenAIKey() async -> Bool {
+        guard let key = openAIApiKey, let url = URL(string: "https://api.openai.com/v1/models") else {
+            await MainActor.run { self.openAIKeyValid = false }
+            return false
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        req.timeoutInterval = 20
+        do {
+            let (_, response) = try await URLSession.shared.data(for: req)
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let ok = (200...299).contains(code)
+            await MainActor.run { self.openAIKeyValid = ok }
+            return ok
+        } catch {
+            await MainActor.run { self.openAIKeyValid = false }
+            return false
+        }
     }
     
     // MARK: Development Helper - Save credentials directly

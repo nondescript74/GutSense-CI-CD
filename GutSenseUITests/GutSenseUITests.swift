@@ -11,6 +11,16 @@ final class GutSenseUITests: XCTestCase {
 
     var app: XCUIApplication!
 
+    private func scrollToElement(_ element: XCUIElement, maxSwipes: Int = 5) {
+        guard !element.exists else { return }
+        let scrollView = app.scrollViews.firstMatch
+        if !scrollView.exists { return }
+        for _ in 0..<maxSwipes {
+            scrollView.swipeUp()
+            if element.exists { return }
+        }
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
@@ -43,29 +53,29 @@ final class GutSenseUITests: XCTestCase {
     func testTabNavigation() throws {
         // Verify all tabs are present and accessible
         let tabBar = app.tabBars.firstMatch
-        XCTAssertTrue(tabBar.exists)
+        XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
         
         // Test Analyze tab
         let analyzeTab = tabBar.buttons["Analyze"]
-        XCTAssertTrue(analyzeTab.exists)
+        XCTAssertTrue(analyzeTab.waitForExistence(timeout: 2))
         analyzeTab.tap()
         XCTAssertTrue(analyzeTab.isSelected)
         
         // Test History tab
         let historyTab = tabBar.buttons["History"]
-        XCTAssertTrue(historyTab.exists)
+        XCTAssertTrue(historyTab.waitForExistence(timeout: 2))
         historyTab.tap()
         XCTAssertTrue(historyTab.isSelected)
         
         // Test Sources tab
         let sourcesTab = tabBar.buttons["Sources"]
-        XCTAssertTrue(sourcesTab.exists)
+        XCTAssertTrue(sourcesTab.waitForExistence(timeout: 2))
         sourcesTab.tap()
         XCTAssertTrue(sourcesTab.isSelected)
         
         // Test Settings tab
         let settingsTab = tabBar.buttons["Settings"]
-        XCTAssertTrue(settingsTab.exists)
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 2))
         settingsTab.tap()
         XCTAssertTrue(settingsTab.isSelected)
     }
@@ -78,25 +88,25 @@ final class GutSenseUITests: XCTestCase {
         app.tabBars.buttons["Analyze"].tap()
         
         // Verify Text mode is default
-        let textButton = app.buttons["Text"]
-        XCTAssertTrue(textButton.exists)
+        let textButton = app.buttons["inputMode.text"]
+        XCTAssertTrue(textButton.waitForExistence(timeout: 2))
         
         // Switch to Photo mode
-        let photoButton = app.buttons["Photo"]
+        let photoButton = app.buttons["inputMode.photo"]
         XCTAssertTrue(photoButton.exists)
         photoButton.tap()
         
         // Verify photo picker interface appears
-        let photoPickerPrompt = app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] 'photo'")).firstMatch
+        let photoPickerPrompt = app.buttons["photoInput.prompt"]
         XCTAssertTrue(photoPickerPrompt.waitForExistence(timeout: 2))
         
         // Switch to Barcode mode
-        let barcodeButton = app.buttons["Barcode"]
+        let barcodeButton = app.buttons["inputMode.barcode"]
         XCTAssertTrue(barcodeButton.exists)
         barcodeButton.tap()
         
         // Verify barcode scanner prompt appears
-        let barcodePrompt = app.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] 'barcode'")).firstMatch
+        let barcodePrompt = app.buttons["barcodeInput.prompt"]
         XCTAssertTrue(barcodePrompt.waitForExistence(timeout: 2))
     }
     
@@ -106,11 +116,11 @@ final class GutSenseUITests: XCTestCase {
         app.tabBars.buttons["Analyze"].tap()
         
         // Ensure we're in text mode
-        app.buttons["Text"].tap()
+        app.buttons["inputMode.text"].tap()
         
         // Find the text input field
-        let textView = app.textViews.firstMatch
-        XCTAssertTrue(textView.exists)
+        let textView = app.textViews["queryInput.textEditor"]
+        XCTAssertTrue(textView.waitForExistence(timeout: 2))
         
         // Enter text
         textView.tap()
@@ -121,8 +131,8 @@ final class GutSenseUITests: XCTestCase {
                      app.textViews.containing(NSPredicate(format: "value CONTAINS 'Garlic bread'")).firstMatch.exists)
         
         // Verify Clear button appears
-        let clearButton = app.buttons["Clear"]
-        XCTAssertTrue(clearButton.exists)
+        let clearButton = app.buttons["queryInput.clearButton"]
+        XCTAssertTrue(clearButton.waitForExistence(timeout: 2))
         
         // Test clearing text
         clearButton.tap()
@@ -135,19 +145,20 @@ final class GutSenseUITests: XCTestCase {
         app.tabBars.buttons["Analyze"].tap()
         
         // Verify example queries section exists
-        let examplesHeader = app.staticTexts["Try an example"]
+        let examplesHeader = app.staticTexts["exampleQueries.header"]
         XCTAssertTrue(examplesHeader.waitForExistence(timeout: 2))
         
         // Verify at least one example query button exists
-        let firstExample = app.buttons.containing(NSPredicate(format: "label CONTAINS[c] 'garlic' OR label CONTAINS[c] 'oats'")).firstMatch
-        XCTAssertTrue(firstExample.exists)
+        let firstExample = app.buttons["exampleQuery.0"]
+        scrollToElement(firstExample)
+        XCTAssertTrue(firstExample.waitForExistence(timeout: 2))
         
         // Tap an example
         firstExample.tap()
         
         // Verify the text was populated in the input field
-        let textView = app.textViews.firstMatch
-        XCTAssertTrue(textView.exists)
+        let textView = app.textViews["queryInput.textEditor"]
+        XCTAssertTrue(textView.waitForExistence(timeout: 2))
         let textValue = textView.value as? String ?? ""
         XCTAssertFalse(textValue.isEmpty)
     }
@@ -160,7 +171,7 @@ final class GutSenseUITests: XCTestCase {
         app.tabBars.buttons["Analyze"].tap()
         
         // Enter some text to show serving selector
-        let textView = app.textViews.firstMatch
+        let textView = app.textViews["queryInput.textEditor"]
         textView.tap()
         textView.typeText("Test food")
         
@@ -196,21 +207,52 @@ final class GutSenseUITests: XCTestCase {
         app.tabBars.buttons["Analyze"].tap()
         
         // Enter some text to show serving selector
-        let textView = app.textViews.firstMatch
+        let textView = app.textViews["queryInput.textEditor"]
         textView.tap()
         textView.typeText("Test food")
         app.tap()
         
         // Find and toggle "Exact grams"
-        let exactGramsToggle = app.buttons["Exact grams"]
+        let exactGramsToggle = app.buttons["servingExactGrams.toggle"].exists
+            ? app.buttons["servingExactGrams.toggle"]
+            : app.switches["servingExactGrams.toggle"]
+        scrollToElement(exactGramsToggle)
         XCTAssertTrue(exactGramsToggle.waitForExistence(timeout: 2))
         exactGramsToggle.tap()
         
         // Find the custom grams text field
-        let gramsField = app.textFields.containing(NSPredicate(format: "placeholderValue CONTAINS 'e.g. 45'")).firstMatch
-        XCTAssertTrue(gramsField.waitForExistence(timeout: 2))
+        let gramsContainer = app.otherElements["servingExactGrams.container"]
+        scrollToElement(gramsContainer)
+        if gramsContainer.waitForExistence(timeout: 2) {
+            let gramsField = gramsContainer.textFields.firstMatch
+            XCTAssertTrue(gramsField.waitForExistence(timeout: 2))
+            gramsField.tap()
+            gramsField.typeText("75")
+            XCTAssertTrue(gramsField.value as? String == "75")
+            return
+        }
+
+        let gramsElement = app.descendants(matching: .any)
+            .matching(identifier: "servingExactGrams.field")
+            .firstMatch
+        scrollToElement(gramsElement)
+        if !gramsElement.waitForExistence(timeout: 5) {
+            let fallbackField = app.textFields.containing(
+                NSPredicate(format: "placeholderValue CONTAINS 'e.g. 45'")
+            ).firstMatch
+            scrollToElement(fallbackField)
+            XCTAssertTrue(fallbackField.waitForExistence(timeout: 2))
+            fallbackField.tap()
+            fallbackField.typeText("75")
+            XCTAssertTrue(fallbackField.value as? String == "75")
+            return
+        }
         
         // Enter custom grams
+        let gramsField = gramsElement.elementType == .textField
+            ? gramsElement
+            : gramsElement.textFields.firstMatch
+        XCTAssertTrue(gramsField.waitForExistence(timeout: 2))
         gramsField.tap()
         gramsField.typeText("75")
         
@@ -233,7 +275,7 @@ final class GutSenseUITests: XCTestCase {
         XCTAssertFalse(analyzeButton.isEnabled)
         
         // Enter text
-        let textView = app.textViews.firstMatch
+        let textView = app.textViews["queryInput.textEditor"]
         textView.tap()
         textView.typeText("Test food")
         app.tap()
@@ -350,9 +392,9 @@ final class GutSenseUITests: XCTestCase {
         XCTAssertFalse(analyzeButton.label.isEmpty)
         
         // Verify input mode buttons have labels
-        let textButton = app.buttons["Text"]
-        let photoButton = app.buttons["Photo"]
-        let barcodeButton = app.buttons["Barcode"]
+        let textButton = app.buttons["inputMode.text"]
+        let photoButton = app.buttons["inputMode.photo"]
+        let barcodeButton = app.buttons["inputMode.barcode"]
         
         XCTAssertTrue(textButton.exists)
         XCTAssertTrue(photoButton.exists)
@@ -367,7 +409,7 @@ final class GutSenseUITests: XCTestCase {
         app.tabBars.buttons["Analyze"].tap()
         
         // Enter text query
-        let textView = app.textViews.firstMatch
+        let textView = app.textViews["queryInput.textEditor"]
         textView.tap()
         textView.typeText("Test food for UI testing")
         app.tap()
@@ -398,7 +440,7 @@ final class GutSenseUITests: XCTestCase {
         app.tabBars.buttons["Analyze"].tap()
         
         // Ensure text mode
-        app.buttons["Text"].tap()
+        app.buttons["inputMode.text"].tap()
         
         // With no input, there should be a message or disabled button
         let analyzeButton = app.buttons["Analyze Food"]

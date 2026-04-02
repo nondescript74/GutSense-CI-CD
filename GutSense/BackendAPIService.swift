@@ -286,6 +286,16 @@ final class BackendAPIService: ObservableObject {
         let r: AgentResultDTO = try await post(path: "/analyze/claude", body: dto)
         return r.toDomain(agentType: .claude)
     }
+    
+    func analyzeOpenAI(query: String, profile: UserProfile,
+                       sources: [UserSource] = [],
+                       serving: ServingViewModel? = nil,
+                       image: UIImage? = nil) async throws -> AgentResult {
+        let dto = makeDTO(query: query, profile: profile, sources: sources,
+                          appleJSON: nil, serving: serving, image: image)
+        let r: AgentResultDTO = try await post(path: "/analyze/openai", body: dto)
+        return r.toDomain(agentType: .openai)
+    }
 
     func analyzeGemini(query: String, profile: UserProfile,
                        sources: [UserSource] = [],
@@ -524,3 +534,4 @@ extension SafetyFlagDTO {
         return SafetyFlagDTO(message: flag.message, severity: severity)
     }
 }
+

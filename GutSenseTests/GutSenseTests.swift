@@ -358,6 +358,55 @@ struct KeychainServiceTests {
     }
 }
 
+// MARK: - CredentialValidator Tests
+
+struct CredentialValidatorTests {
+    
+    @Test("CredentialValidator identifies which credentials can be validated")
+    func testCanValidate() {
+        let openAIDef = ServiceIdentifier.openai.credentials.first!
+        let anthropicDef = ServiceIdentifier.anthropic.credentials.first!
+        let geminiDef = ServiceIdentifier.gemini.credentials.first!
+        let backendDef = ServiceIdentifier.gutsenseAPI.credentials.first!
+        let monashEmailDef = ServiceIdentifier.monash.credentials.first!
+        
+        #expect(CredentialValidator.canValidate(openAIDef) == true)
+        #expect(CredentialValidator.canValidate(anthropicDef) == true)
+        #expect(CredentialValidator.canValidate(geminiDef) == true)
+        #expect(CredentialValidator.canValidate(backendDef) == true)
+        #expect(CredentialValidator.canValidate(monashEmailDef) == false)
+    }
+    
+    @Test("CredentialValidator format validation uses prefix hints")
+    func testFormatValidation() {
+        let anthropicDef = ServiceIdentifier.anthropic.credentials.first!
+        let validAnthropic = CredentialValidator.formatValidationResult(
+            for: anthropicDef,
+            value: "sk-ant-123"
+        )
+        let invalidAnthropic = CredentialValidator.formatValidationResult(
+            for: anthropicDef,
+            value: "invalid-key"
+        )
+        #expect(validAnthropic?.isSuccess == true)
+        #expect(invalidAnthropic?.isSuccess == false)
+        
+        let geminiDef = ServiceIdentifier.gemini.credentials.first!
+        let validGemini = CredentialValidator.formatValidationResult(
+            for: geminiDef,
+            value: "AIza123"
+        )
+        #expect(validGemini?.isSuccess == true)
+        
+        let monashEmailDef = ServiceIdentifier.monash.credentials.first!
+        let monashResult = CredentialValidator.formatValidationResult(
+            for: monashEmailDef,
+            value: "test@example.com"
+        )
+        #expect(monashResult == nil)
+    }
+}
+
 // MARK: - QueryViewModel Tests
 
 struct QueryViewModelTests {
@@ -791,4 +840,3 @@ struct QueryInputModeTests {
         #expect(QueryInputMode.allCases.contains(.barcode))
     }
 }
-

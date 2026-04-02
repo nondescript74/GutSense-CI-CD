@@ -289,6 +289,7 @@ enum AgentType: String {
     case apple      = "apple"
     case claude     = "claude"
     case gemini     = "gemini"
+    case openai     = "openai"
     case perplexity = "perplexity"
 }
 
@@ -313,12 +314,6 @@ enum ConfidenceTier: String, CaseIterable {
         case .anecdotal:    return 0.18
         }
     }
-}
-
-enum FlagSeverity: Equatable, Sendable {
-    case info
-    case warning
-    case critical
 }
 
 // MARK: - Agent Data Structs
@@ -399,5 +394,3 @@ struct SynthesisResult {
     let safetyFlags: [SafetyFlag]
     let isLoading: Bool
 }
-
-

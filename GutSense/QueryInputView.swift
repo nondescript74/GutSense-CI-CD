@@ -130,6 +130,7 @@ struct InputModePicker: View {
                     )
                     .foregroundColor(selectedMode == mode ? .white : .secondary)
                 }
+                .accessibilityIdentifier("inputMode.\(mode.rawValue.lowercased())")
                 .buttonStyle(.plain)
 
                 if mode != QueryInputMode.allCases.last {
@@ -164,6 +165,7 @@ struct TextInputPanel: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.gray.opacity(0.2))
                 )
+                .accessibilityIdentifier("queryInput.textEditor")
 
             if !vm.textQuery.isEmpty {
                 HStack {
@@ -173,6 +175,7 @@ struct TextInputPanel: View {
                     }
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .accessibilityIdentifier("queryInput.clearButton")
                 }
             }
         }
@@ -231,6 +234,7 @@ struct PhotoInputPanel: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("photoInput.prompt")
                 .onChange(of: vm.selectedPhoto) { _, newItem in
                     Task {
                         if let data = try? await newItem?.loadTransferable(type: Data.self),
@@ -346,6 +350,7 @@ struct BarcodeInputPanel: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("barcodeInput.prompt")
                 .sheet(isPresented: $showScanner) {
                     BarcodeScannerView { code in
                         vm.barcodeValue = code
@@ -411,9 +416,14 @@ struct ReadinessWarningCard: View {
                     Text("API Keys Required")
                         .font(.caption.weight(.semibold))
                         .foregroundColor(.primary)
-                    Text("Tap to configure Anthropic, Gemini, and Backend URL")
+                    Text("Tap to configure \(CredentialsStore.shared.primaryProvider.label), Gemini, and Backend URL")
                         .font(.caption2)
                         .foregroundColor(.secondary)
+                    if CredentialsStore.shared.primaryProvider == .openai {
+                        Text("Note: OpenAI key must be verified before use")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -448,9 +458,10 @@ struct ExampleQueriesGrid: View {
             Text("Try an example")
                 .font(.caption.weight(.semibold))
                 .foregroundColor(.secondary)
+                .accessibilityIdentifier("exampleQueries.header")
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(examples, id: \.self) { example in
+                ForEach(Array(examples.enumerated()), id: \.offset) { index, example in
                     Button {
                         onSelect(example)
                     } label: {
@@ -464,6 +475,7 @@ struct ExampleQueriesGrid: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("exampleQuery.\(index)")
                 }
             }
         }
