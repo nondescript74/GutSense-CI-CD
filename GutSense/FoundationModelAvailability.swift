@@ -34,50 +34,9 @@ final class AppleFoundationModelService: ObservableObject {
     @Published var availability: FoundationModelAvailability = .modelNotReady
     
     // MARK: - Key Verification
-    // Replace the key name with the actual one you use to store Apple Intelligence/Foundation Models access key if applicable.
-    // For parity with ChatGPT key handling, we verify presence and basic shape.
-    private enum KeySource {
-        case infoPlist(String)
-        case environment(String)
-    }
-
-    // Configure the list of required keys here. Adjust names to match your project settings.
-    private let requiredKeys: [KeySource] = [
-        .infoPlist("APPLE_FOUNDATION_MODEL_KEY")
-    ]
-
-    private func readValue(for source: KeySource) -> String? {
-        switch source {
-        case .infoPlist(let key):
-            return Bundle.main.object(forInfoDictionaryKey: key) as? String
-        case .environment(let name):
-            return ProcessInfo.processInfo.environment[name]
-        }
-    }
-
+    // Apple Foundation Models do not require an app-provided API key.
     private func verifyKeys() -> Bool {
-        var ok = true
-        for source in requiredKeys {
-            let value = readValue(for: source)?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let name: String
-            switch source {
-            case .infoPlist(let key): name = key
-            case .environment(let env): name = env
-            }
-            if let value, !value.isEmpty {
-                // Basic shape check: length >= 8 (adjust to your actual key format as needed)
-                if value.count < 8 {
-                    Self.logger.error("🔑 Key \(name, privacy: .public) present but appears malformed (too short)")
-                    ok = false
-                } else {
-                    Self.logger.debug("🔑 Key \(name, privacy: .public) verified present")
-                }
-            } else {
-                Self.logger.error("🔑 Missing required key: \(name, privacy: .public)")
-                ok = false
-            }
-        }
-        return ok
+        true
     }
     
     // Detect if the current process is running as root (UID 0)
@@ -414,20 +373,78 @@ final class AppleFoundationModelService: ObservableObject {
         print("🍎 Cleaned JSON for parsing:")
         print(cleaned)
 
-        guard let data = cleaned.data(using: .utf8) else {
-            Self.logger.error("❌ Synthesis parse failed: response not UTF-8 data")
-            return fallbackSynthesisResult(reason: "Apple synthesis returned unexpected format.")
-        }
-
         let dto: SynthesisResultDTO
         do {
-            dto = try JSONDecoder().decode(SynthesisResultDTO.self, from: data)
+            dto = try decodeSynthesis(from: cleaned)
         } catch {
-            Self.logger.error("❌ Synthesis JSON decode error: \(String(describing: error), privacy: .public)")
-            return fallbackSynthesisResult(reason: "Apple synthesis returned unexpected format: \(error.localizedDescription)")
+            let sanitized = sanitizeSynthesisJSON(cleaned)
+            if sanitized != cleaned {
+                do {
+                    dto = try decodeSynthesis(from: sanitized)
+                } catch {
+                    Self.logger.error("❌ Synthesis JSON decode error after sanitize: \(String(describing: error), privacy: .public)")
+                    return fallbackSynthesisResult(reason: "Apple synthesis returned unexpected format: \(error.localizedDescription)")
+                }
+            } else {
+                Self.logger.error("❌ Synthesis JSON decode error: \(String(describing: error), privacy: .public)")
+                return fallbackSynthesisResult(reason: "Apple synthesis returned unexpected format: \(error.localizedDescription)")
+            }
         }
 
         return dto.toDomain()
+    }
+
+    private func decodeSynthesis(from text: String) throws -> SynthesisResultDTO {
+        guard let data = text.data(using: .utf8) else {
+            Self.logger.error("❌ Synthesis parse failed: response not UTF-8 data")
+            throw NSError(domain: "GutSense", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid UTF-8"])
+        }
+        return try JSONDecoder().decode(SynthesisResultDTO.self, from: data)
+    }
+
+    private func sanitizeSynthesisJSON(_ text: String) -> String {
+        var cleaned = text
+
+        // Fix invalid key_disagreements entries like { "text" } -> "text"
+        if let keyRange = cleaned.range(of: "\"key_disagreements\"") {
+            if let startBracket = cleaned[keyRange.upperBound...].firstIndex(of: "[") {
+                var depth = 0
+                var endBracket: String.Index? = nil
+                var index = startBracket
+                while index < cleaned.endIndex {
+                    let ch = cleaned[index]
+                    if ch == "[" { depth += 1 }
+                    if ch == "]" {
+                        depth -= 1
+                        if depth == 0 {
+                            endBracket = index
+                            break
+                        }
+                    }
+                    index = cleaned.index(after: index)
+                }
+                if let endBracket {
+                    let arrayRange = startBracket...endBracket
+                    let arrayText = String(cleaned[arrayRange])
+                    let fixedArray = arrayText
+                        .replacingOccurrences(
+                            of: "\\{\\s*\\\"([^\\\"\\\\]*(?:\\\\.[^\\\"\\\\]*)*)\\\"\\s*\\}",
+                            with: "\"$1\"",
+                            options: .regularExpression
+                        )
+                    cleaned.replaceSubrange(arrayRange, with: fixedArray)
+                }
+            }
+        }
+
+        // Remove trailing commas before } or ]
+        cleaned = cleaned.replacingOccurrences(
+            of: ",\\s*([}\\]])",
+            with: "$1",
+            options: .regularExpression
+        )
+
+        return cleaned
     }
 
     // MARK: - Fallback

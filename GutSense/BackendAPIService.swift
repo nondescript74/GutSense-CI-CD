@@ -90,7 +90,20 @@ struct UserSourceDTO: Codable {
         reconciled_tiers = try container.decode([IngredientFODMAPDTO].self, forKey: .reconciled_tiers)
         final_ibs_probability = try container.decode(Double.self, forKey: .final_ibs_probability)
         confidence_band = try container.decode(Double.self, forKey: .confidence_band)
-        enzyme_recommendation = try container.decodeIfPresent(EnzymeRecommendationDTO.self, forKey: .enzyme_recommendation)
+        if let recommendation = try? container.decodeIfPresent(EnzymeRecommendationDTO.self, forKey: .enzyme_recommendation) {
+            enzyme_recommendation = recommendation
+        } else if let recommendationText = try? container.decodeIfPresent(String.self, forKey: .enzyme_recommendation) {
+            enzyme_recommendation = EnzymeRecommendationDTO(
+                name: "Enzyme Recommendation",
+                brand: "Unknown",
+                targets: "",
+                dose: "",
+                temperature_warning: false,
+                notes: recommendationText
+            )
+        } else {
+            enzyme_recommendation = nil
+        }
         synthesis_rationale = try container.decode(String.self, forKey: .synthesis_rationale)
         safety_flags = try container.decode([SafetyFlagDTO].self, forKey: .safety_flags)
         
@@ -262,6 +275,18 @@ final class BackendAPIService: ObservableObject {
     static let shared = BackendAPIService()
     private let keychain = KeychainService.shared
 
+    struct NetworkLogEntry: Identifiable {
+        let id = UUID()
+        let timestamp: Date
+        let url: String
+        let requestBody: String
+        let statusCode: Int?
+        let responseBody: String
+        let errorDescription: String?
+    }
+
+    @Published private(set) var networkLogs: [NetworkLogEntry] = []
+
     private var session: URLSession = {
         let c = URLSessionConfiguration.default
         c.timeoutIntervalForRequest  = 120  // Increased to 2 minutes for synthesis
@@ -353,20 +378,87 @@ final class BackendAPIService: ObservableObject {
         if let secret = keychain.read(forKey: "gutsense.api_secret") {
             req.setValue("Bearer \(secret)", forHTTPHeaderField: "Authorization")
         }
-        do { req.httpBody = try JSONEncoder().encode(body) }
+        let bodyData: Data
+        do { bodyData = try JSONEncoder().encode(body) }
         catch { throw BackendAPIError.decodingError(error) }
+        req.httpBody = bodyData
+        let bodyString = String(data: bodyData, encoding: .utf8) ?? "<non-utf8>"
+#if DEBUG
+        print("➡️ [BackendAPI] POST \(url.absoluteString)")
+        print("➡️ [BackendAPI] Body: \(bodyString)")
+#endif
 
         let (data, response): (Data, URLResponse)
         do { (data, response) = try await session.data(for: req) }
-        catch { throw BackendAPIError.networkError(error) }
+        catch {
+#if DEBUG
+            appendNetworkLog(
+                url: url.absoluteString,
+                requestBody: bodyString,
+                statusCode: nil,
+                responseBody: "",
+                errorDescription: error.localizedDescription
+            )
+#endif
+            throw BackendAPIError.networkError(error)
+        }
 
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+#if DEBUG
+            let responseBody = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+            print("⬅️ [BackendAPI] Status: \(http.statusCode)")
+            print("⬅️ [BackendAPI] Response: \(responseBody)")
+            appendNetworkLog(
+                url: url.absoluteString,
+                requestBody: bodyString,
+                statusCode: http.statusCode,
+                responseBody: responseBody,
+                errorDescription: nil
+            )
+#endif
             throw BackendAPIError.httpError(http.statusCode,
                 String(data: data, encoding: .utf8) ?? "Unknown error")
         }
+#if DEBUG
+        if let http = response as? HTTPURLResponse {
+            let responseBody = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+            print("⬅️ [BackendAPI] Status: \(http.statusCode)")
+            print("⬅️ [BackendAPI] Response: \(responseBody)")
+            appendNetworkLog(
+                url: url.absoluteString,
+                requestBody: bodyString,
+                statusCode: http.statusCode,
+                responseBody: responseBody,
+                errorDescription: nil
+            )
+        }
+#endif
         do { return try JSONDecoder().decode(Res.self, from: data) }
         catch { throw BackendAPIError.decodingError(error) }
     }
+
+#if DEBUG
+    private func appendNetworkLog(
+        url: String,
+        requestBody: String,
+        statusCode: Int?,
+        responseBody: String,
+        errorDescription: String?
+    ) {
+        let entry = NetworkLogEntry(
+            timestamp: Date(),
+            url: url,
+            requestBody: requestBody,
+            statusCode: statusCode,
+            responseBody: responseBody,
+            errorDescription: errorDescription
+        )
+        networkLogs.insert(entry, at: 0)
+        if networkLogs.count > 20 {
+            networkLogs.removeLast(networkLogs.count - 20)
+        }
+    }
+#endif
 
     // MARK: - DTO Builder
 
@@ -534,4 +626,3 @@ extension SafetyFlagDTO {
         return SafetyFlagDTO(message: flag.message, severity: severity)
     }
 }
-
