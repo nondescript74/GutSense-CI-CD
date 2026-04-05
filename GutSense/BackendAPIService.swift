@@ -166,6 +166,39 @@ struct SafetyFlagDTO: Codable, @unchecked Sendable {
     let severity: String
 }
 
+// MARK: - Simulation DTOs
+
+struct SimulationIngredientDTO: Codable {
+    let ingredient: String
+    let tier: String
+    let fructan_g: Double
+    let gos_g: Double
+    let lactose_g: Double
+    let fructose_g: Double
+    let polyol_g: Double
+    let serving_size_g: Double
+    let source: String
+    let provenance: String
+}
+
+struct ResynthesisRequestDTO: Codable {
+    let original_query: String
+    let edited_ingredients: [SimulationIngredientDTO]
+    let primary_result: AgentResultDTO
+    let gemini_result: AgentResultDTO
+    let user_profile: UserProfileDTO
+}
+
+struct ResynthesisResponseDTO: Codable {
+    let reconciled_tiers: [IngredientFODMAPDTO]
+    let final_ibs_probability: Double
+    let confidence_band: Double
+    let synthesis_rationale: String
+    let key_disagreements: [String]
+    let safety_flags: [SafetyFlagDTO]
+    let enzyme_recommendation: EnzymeRecommendationDTO?
+}
+
 // MARK: - Error
 
 enum BackendAPIError: LocalizedError {
@@ -361,6 +394,59 @@ final class BackendAPIService: ObservableObject {
         }
         
         throw lastError ?? BackendAPIError.networkError(NSError(domain: "GutSense", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"]))
+    }
+
+    // MARK: - Simulation Re-synthesis
+
+    func resynthesizeSimulation(
+        originalQuery: String,
+        editedIngredients: [SimulationIngredient],
+        primaryResult: AgentResult,
+        geminiResult: AgentResult,
+        userProfile: UserProfile
+    ) async throws -> SimulationResynthesisResult {
+        let ingredientDTOs = editedIngredients.map { ing in
+            SimulationIngredientDTO(
+                ingredient: ing.ingredient,
+                tier: ing.tier.rawValue.lowercased(),
+                fructan_g: ing.fructanG,
+                gos_g: ing.gosG,
+                lactose_g: ing.lactoseG,
+                fructose_g: ing.fructoseG,
+                polyol_g: ing.polyolG,
+                serving_size_g: ing.servingSizeG,
+                source: ing.source,
+                provenance: ing.provenance.rawValue
+            )
+        }
+
+        let dto = ResynthesisRequestDTO(
+            original_query: originalQuery,
+            edited_ingredients: ingredientDTOs,
+            primary_result: AgentResultDTO.from(primaryResult),
+            gemini_result: AgentResultDTO.from(geminiResult),
+            user_profile: UserProfileDTO(
+                ibs_subtype: userProfile.ibsSubtype.rawValue,
+                fodmap_phase: userProfile.fodmapPhase.rawValue,
+                known_triggers: userProfile.knownTriggers.map { $0.rawValue },
+                known_safe_foods: userProfile.knownSafeFoods,
+                medications: userProfile.medications,
+                diagnosed_conditions: userProfile.diagnosedConditions,
+                sensitivities: userProfile.sensitivities.isEmpty ? nil : userProfile.sensitivities,
+                ai_notes: userProfile.aiNotes.isEmpty ? nil : userProfile.aiNotes
+            )
+        )
+
+        let r: ResynthesisResponseDTO = try await post(path: "/simulate/resynthesize", body: dto)
+        return SimulationResynthesisResult(
+            reconciledTiers: r.reconciled_tiers.map { $0.toDomain() },
+            finalIBSProbability: r.final_ibs_probability,
+            confidenceBand: r.confidence_band,
+            synthesisRationale: r.synthesis_rationale,
+            keyDisagreements: r.key_disagreements,
+            safetyFlags: r.safety_flags.map { $0.toDomain() },
+            enzymeRecommendation: r.enzyme_recommendation?.toDomain()
+        )
     }
 
     // MARK: - Generic POST

@@ -8,6 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		F847CFEC2F5B58270047F285 /* FeedbackView_Hookup.md in Resources */ = {isa = PBXBuildFile; fileRef = F847CFEB2F5B58270047F285 /* FeedbackView_Hookup.md */; };
+		F872EBC72F81BD96002BEEDF /* CHECKLIST.md in Resources */ = {isa = PBXBuildFile; fileRef = F872EBBB2F81BD96002BEEDF /* CHECKLIST.md */; };
+		F872EBC92F81BD96002BEEDF /* KEYCHAIN_SHARING.md in Resources */ = {isa = PBXBuildFile; fileRef = F872EBBF2F81BD96002BEEDF /* KEYCHAIN_SHARING.md */; };
+		F872EBCA2F81BD96002BEEDF /* QUICK_START.md in Resources */ = {isa = PBXBuildFile; fileRef = F872EBC12F81BD96002BEEDF /* QUICK_START.md */; };
+		F872EBCB2F81BD96002BEEDF /* SETUP_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = F872EBC22F81BD96002BEEDF /* SETUP_GUIDE.md */; };
+		F872EBCC2F81BD96002BEEDF /* SIGNING_FIX.md in Resources */ = {isa = PBXBuildFile; fileRef = F872EBC32F81BD96002BEEDF /* SIGNING_FIX.md */; };
 		F8F1BAF22F59E354009C2630 /* XCODE_SETUP.md in Resources */ = {isa = PBXBuildFile; fileRef = F8F1BAF12F59E354009C2630 /* XCODE_SETUP.md */; };
 		F8F1BB442F5A20A7009C2630 /* StrongGutAppClip.app in Embed App Clips */ = {isa = PBXBuildFile; fileRef = F8F1BB202F5A20A5009C2630 /* StrongGutAppClip.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -64,6 +69,11 @@
 
 /* Begin PBXFileReference section */
 		F847CFEB2F5B58270047F285 /* FeedbackView_Hookup.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FeedbackView_Hookup.md; sourceTree = "<group>"; };
+		F872EBBB2F81BD96002BEEDF /* CHECKLIST.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHECKLIST.md; sourceTree = "<group>"; };
+		F872EBBF2F81BD96002BEEDF /* KEYCHAIN_SHARING.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = KEYCHAIN_SHARING.md; sourceTree = "<group>"; };
+		F872EBC12F81BD96002BEEDF /* QUICK_START.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = QUICK_START.md; sourceTree = "<group>"; };
+		F872EBC22F81BD96002BEEDF /* SETUP_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SETUP_GUIDE.md; sourceTree = "<group>"; };
+		F872EBC32F81BD96002BEEDF /* SIGNING_FIX.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SIGNING_FIX.md; sourceTree = "<group>"; };
 		F8F1A4832F59DDA7009C2630 /* GutSense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GutSense.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8F1A4922F59DDA9009C2630 /* GutSenseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GutSenseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8F1A49C2F59DDA9009C2630 /* GutSenseUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GutSenseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,11 +104,15 @@
 				BackendAPIService.swift,
 				DomainModels.swift,
 				FeedbackView.swift,
+				FODMAPRiskCalculator.swift,
 				FoundationModelAvailability.swift,
+				IngredientProvenanceEngine.swift,
+				IngredientSimulationView.swift,
 				KeychainService.swift,
 				Models.swift,
 				QueryInputMode.swift,
 				ServingAmountView.swift,
+				SimulationViewModel.swift,
 				ThreePaneResultsView.swift,
 			);
 			target = F8F1BB1F2F5A20A5009C2630 /* StrongGutAppClip */;
@@ -191,6 +205,11 @@
 				F8F1A4842F59DDA7009C2630 /* Products */,
 				F8F1BAF12F59E354009C2630 /* XCODE_SETUP.md */,
 				F847CFEB2F5B58270047F285 /* FeedbackView_Hookup.md */,
+				F872EBBB2F81BD96002BEEDF /* CHECKLIST.md */,
+				F872EBBF2F81BD96002BEEDF /* KEYCHAIN_SHARING.md */,
+				F872EBC12F81BD96002BEEDF /* QUICK_START.md */,
+				F872EBC22F81BD96002BEEDF /* SETUP_GUIDE.md */,
+				F872EBC32F81BD96002BEEDF /* SIGNING_FIX.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -413,6 +432,11 @@
 		F8F1BB1E2F5A20A5009C2630 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				F872EBC72F81BD96002BEEDF /* CHECKLIST.md in Resources */,
+				F872EBC92F81BD96002BEEDF /* KEYCHAIN_SHARING.md in Resources */,
+				F872EBCA2F81BD96002BEEDF /* QUICK_START.md in Resources */,
+				F872EBCB2F81BD96002BEEDF /* SETUP_GUIDE.md in Resources */,
+				F872EBCC2F81BD96002BEEDF /* SIGNING_FIX.md in Resources */,
 			);
 		};
 		F8F1BB2E2F5A20A7009C2630 /* Resources */ = {
@@ -641,7 +665,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 3.1;
+				MARKETING_VERSION = 3.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.headydiscy.isg;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -695,7 +719,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 3.1;
+				MARKETING_VERSION = 3.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.headydiscy.isg;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -843,7 +867,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.1;
+				MARKETING_VERSION = 3.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.headydiscy.isg.Clip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -886,7 +910,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.1;
+				MARKETING_VERSION = 3.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.headydiscy.isg.Clip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

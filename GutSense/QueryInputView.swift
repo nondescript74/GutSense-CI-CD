@@ -10,6 +10,7 @@
 // Main query entry screen: text / photo / barcode modes
 // Fires the 3-agent pipeline via QueryViewModel
 
+import Foundation
 import SwiftUI
 import PhotosUI
 
@@ -87,7 +88,9 @@ struct QueryInputView: View {
                     productName: vm.productName,
                     productImage: vm.productImage,
                     barcodeValue: vm.barcodeValue,
-                    appleService: AppleFoundationModelService.shared
+                    userProfile: vm.userProfile,
+                    appleService: AppleFoundationModelService.shared,
+                    simulationVM: vm.simulationVM
                 )
                 .navigationBarBackButtonHidden(vm.phase.isRunning)
                 // Live-update as results arrive

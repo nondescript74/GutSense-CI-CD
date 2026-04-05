@@ -840,3 +840,366 @@ struct QueryInputModeTests {
         #expect(QueryInputMode.allCases.contains(.barcode))
     }
 }
+
+// MARK: - Ingredient Simulation Tests
+
+struct FODMAPRiskCalculatorTests {
+
+    @Test("FODMAPRiskCalculator computes low risk with small totals")
+    func testLowRiskCalculation() {
+        let ingredients = [
+            makeSimulationIngredient(
+                id: "a",
+                name: "Garlic",
+                tier: .high,
+                fructan: 0.2,
+                gos: 0,
+                lactose: 0,
+                fructose: 0,
+                polyol: 0,
+                included: true
+            ),
+            makeSimulationIngredient(
+                id: "b",
+                name: "Onion",
+                tier: .high,
+                fructan: 0.5,
+                gos: 0,
+                lactose: 0,
+                fructose: 0,
+                polyol: 0,
+                included: false
+            ),
+        ]
+
+        let result = FODMAPRiskCalculator.calculate(ingredients: ingredients, baselineProbability: 0.01)
+
+        #expect(result.totalFructan == 0.2)
+        #expect(result.totalFODMAPLoad == 0.2)
+        #expect(result.includedCount == 1)
+        #expect(result.excludedCount == 1)
+        #expect(result.estimatedProbability == 0.013)
+        #expect(result.delta == 0.003)
+        #expect(result.riskTier == .low)
+    }
+
+    @Test("FODMAPRiskCalculator yields moderate risk when all categories are high")
+    func testModerateRiskFromHighTotals() {
+        let ingredients = [
+            makeSimulationIngredient(
+                id: "a",
+                name: "Mixed",
+                tier: .high,
+                fructan: 1.1,
+                gos: 1.1,
+                lactose: 4.1,
+                fructose: 0.6,
+                polyol: 0.6,
+                included: true
+            )
+        ]
+
+        let result = FODMAPRiskCalculator.calculate(ingredients: ingredients, baselineProbability: 0.0)
+
+        #expect(result.totalFructan == 1.1)
+        #expect(result.totalGOS == 1.1)
+        #expect(result.totalLactose == 4.1)
+        #expect(result.totalFructose == 0.6)
+        #expect(result.totalPolyol == 0.6)
+        #expect(result.totalFODMAPLoad == 7.5)
+        #expect(result.estimatedProbability == 0.55)
+        #expect(result.riskTier == .moderate)
+    }
+}
+
+struct IngredientProvenanceEngineTests {
+
+    @Test("Provenance engine merges overlaps and adds Apple-only ingredients")
+    func testMergeAndAppleAdditions() {
+        let primary = makeAgentResult(
+            agentType: .claude,
+            tiers: [
+                makeIngredientFODMAP(
+                    name: "Garlic",
+                    tier: .moderate,
+                    fructan: 0.4,
+                    gos: 0.1,
+                    lactose: 0,
+                    fructose: 0,
+                    polyol: 0,
+                    serving: 3,
+                    source: "Primary"
+                ),
+                makeIngredientFODMAP(
+                    name: "Bread",
+                    tier: .low,
+                    fructan: 0.1,
+                    gos: 0,
+                    lactose: 0,
+                    fructose: 0,
+                    polyol: 0,
+                    serving: 30,
+                    source: "Primary"
+                ),
+            ]
+        )
+
+        let gemini = makeAgentResult(
+            agentType: .gemini,
+            tiers: [
+                makeIngredientFODMAP(
+                    name: " garlic ",
+                    tier: .high,
+                    fructan: 0.6,
+                    gos: 0.3,
+                    lactose: 0,
+                    fructose: 0,
+                    polyol: 0,
+                    serving: 3,
+                    source: "Gemini"
+                ),
+                makeIngredientFODMAP(
+                    name: "Milk",
+                    tier: .moderate,
+                    fructan: 0,
+                    gos: 0,
+                    lactose: 2.0,
+                    fructose: 0,
+                    polyol: 0,
+                    serving: 200,
+                    source: "Gemini"
+                ),
+            ]
+        )
+
+        let synthesis = SynthesisResult(
+            reconciledTiers: [
+                makeIngredientFODMAP(
+                    name: "AppleOnly",
+                    tier: .low,
+                    fructan: 0,
+                    gos: 0,
+                    lactose: 0,
+                    fructose: 0.1,
+                    polyol: 0,
+                    serving: 150,
+                    source: "Apple"
+                )
+            ],
+            finalIBSProbability: 0,
+            confidenceBand: 0,
+            enzymeRecommendation: nil,
+            keyDisagreements: [],
+            synthesisRationale: "",
+            safetyFlags: [],
+            isLoading: false
+        )
+
+        let result = IngredientProvenanceEngine.deriveSimulationIngredients(
+            primaryResult: primary,
+            geminiResult: gemini,
+            synthesisResult: synthesis
+        )
+
+        #expect(result.count == 4)
+
+        let garlic = result.first { $0.ingredient == "Garlic" }
+        #expect(garlic?.provenance == .both)
+        #expect(garlic?.tier == .high)
+        #expect(garlic?.fructanG == 0.5)
+        #expect(garlic?.gosG == 0.2)
+        #expect(garlic?.source == "Primary; Gemini")
+
+        let bread = result.first { $0.ingredient == "Bread" }
+        #expect(bread?.provenance == .claude)
+
+        let milk = result.first { $0.ingredient == "Milk" }
+        #expect(milk?.provenance == .gemini)
+
+        let appleOnly = result.first { $0.ingredient == "AppleOnly" }
+        #expect(appleOnly?.provenance == .apple)
+    }
+}
+
+struct SimulationViewModelTests {
+
+    @Test("SimulationViewModel initialize seeds ingredients and risk")
+    @MainActor
+    func testInitialize() {
+        let vm = SimulationViewModel()
+        let primary = makeAgentResult(
+            agentType: .claude,
+            tiers: [
+                makeIngredientFODMAP(
+                    name: "Garlic",
+                    tier: .moderate,
+                    fructan: 0.4,
+                    gos: 0.1,
+                    lactose: 0,
+                    fructose: 0,
+                    polyol: 0,
+                    serving: 3,
+                    source: "Primary"
+                ),
+                makeIngredientFODMAP(
+                    name: "Bread",
+                    tier: .low,
+                    fructan: 0.1,
+                    gos: 0,
+                    lactose: 0,
+                    fructose: 0,
+                    polyol: 0,
+                    serving: 30,
+                    source: "Primary"
+                ),
+            ]
+        )
+        let gemini = makeAgentResult(
+            agentType: .gemini,
+            tiers: [
+                makeIngredientFODMAP(
+                    name: "Milk",
+                    tier: .moderate,
+                    fructan: 0,
+                    gos: 0,
+                    lactose: 2.0,
+                    fructose: 0,
+                    polyol: 0,
+                    serving: 200,
+                    source: "Gemini"
+                ),
+            ]
+        )
+
+        vm.initialize(primaryResult: primary, geminiResult: gemini, baselineProb: 0.1)
+
+        #expect(vm.ingredients.count == 3)
+        #expect(vm.baselineProbability == 0.1)
+        #expect(vm.risk != nil)
+        #expect(vm.isDirty == false)
+    }
+
+    @Test("SimulationViewModel updates counts when toggling, removing, and adding")
+    @MainActor
+    func testToggleRemoveAdd() {
+        let vm = SimulationViewModel()
+        let primary = makeAgentResult(
+            agentType: .claude,
+            tiers: [
+                makeIngredientFODMAP(
+                    name: "Garlic",
+                    tier: .moderate,
+                    fructan: 0.4,
+                    gos: 0.1,
+                    lactose: 0,
+                    fructose: 0,
+                    polyol: 0,
+                    serving: 3,
+                    source: "Primary"
+                ),
+                makeIngredientFODMAP(
+                    name: "Bread",
+                    tier: .low,
+                    fructan: 0.1,
+                    gos: 0,
+                    lactose: 0,
+                    fructose: 0,
+                    polyol: 0,
+                    serving: 30,
+                    source: "Primary"
+                ),
+            ]
+        )
+
+        vm.initialize(primaryResult: primary, geminiResult: nil, baselineProb: 0.1)
+
+        let firstId = vm.ingredients[0].id
+        let includedBefore = vm.risk?.includedCount ?? 0
+
+        vm.toggleIngredient(firstId)
+
+        #expect(vm.isDirty == true)
+        #expect(vm.risk?.includedCount == includedBefore - 1)
+
+        let countAfterToggle = vm.ingredients.count
+        vm.removeIngredient(firstId)
+        #expect(vm.ingredients.count == countAfterToggle - 1)
+
+        vm.addIngredient(name: "UserAdded")
+        #expect(vm.ingredients.last?.ingredient == "UserAdded")
+        #expect(vm.ingredients.last?.provenance == .user)
+        #expect(vm.ingredients.last?.included == true)
+    }
+}
+
+// MARK: - Test Helpers
+
+private func makeIngredientFODMAP(
+    name: String,
+    tier: FODMAPTier,
+    fructan: Double,
+    gos: Double,
+    lactose: Double,
+    fructose: Double,
+    polyol: Double,
+    serving: Double,
+    source: String
+) -> IngredientFODMAP {
+    IngredientFODMAP(
+        ingredient: name,
+        tier: tier,
+        fructanG: fructan,
+        gosG: gos,
+        lactoseG: lactose,
+        fructoseG: fructose,
+        polyolG: polyol,
+        servingSizeG: serving,
+        source: source
+    )
+}
+
+private func makeAgentResult(agentType: AgentType, tiers: [IngredientFODMAP]) -> AgentResult {
+    AgentResult(
+        agentType: agentType,
+        fodmapTiers: tiers,
+        ibsTriggerProbability: 0.5,
+        confidenceTier: .clinical,
+        confidenceInterval: 0.1,
+        bioavailability: [],
+        enzymeRecommendations: [],
+        citations: [],
+        personalizedRiskDelta: 0,
+        totalFructanG: 0,
+        totalGOSG: 0,
+        safetyFlags: [],
+        processingLatencyMs: 0,
+        isLoading: false
+    )
+}
+
+private func makeSimulationIngredient(
+    id: String,
+    name: String,
+    tier: FODMAPTier,
+    fructan: Double,
+    gos: Double,
+    lactose: Double,
+    fructose: Double,
+    polyol: Double,
+    included: Bool
+) -> SimulationIngredient {
+    SimulationIngredient(
+        id: id,
+        ingredient: name,
+        tier: tier,
+        fructanG: fructan,
+        gosG: gos,
+        lactoseG: lactose,
+        fructoseG: fructose,
+        polyolG: polyol,
+        servingSizeG: 0,
+        source: "Test",
+        provenance: .claude,
+        included: included
+    )
+}

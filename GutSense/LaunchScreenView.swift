@@ -5,6 +5,7 @@
 //  Created by Zahirudeen Premji on 3/5/26.
 //
 
+import Foundation
 import SwiftUI
 
 struct LaunchScreenView: View {
@@ -60,6 +61,13 @@ struct LaunchScreenView: View {
                 }
             }
             .onAppear {
+                if ProcessInfo.processInfo.arguments.contains("UI-TESTING") ||
+                    ProcessInfo.processInfo.arguments.contains("UI-TESTING-SIMULATION") {
+                    isActive = true
+                    opacity = 1.0
+                    return
+                }
+
                 // Fade in animation
                 withAnimation(.easeIn(duration: 0.3)) {
                     opacity = 1.0

@@ -100,6 +100,9 @@ final class QueryViewModel: ObservableObject {
     
     // MARK: Serving size
     @Published var servingViewModel = ServingViewModel()
+
+    // MARK: Ingredient simulation
+    @Published var simulationVM = SimulationViewModel()
     
     // MARK: SwiftData context (injected by parent)
     var modelContext: ModelContext?
@@ -172,7 +175,10 @@ final class QueryViewModel: ObservableObject {
         }
         
         phase = .complete
-        
+
+        // Initialize ingredient simulation
+        initializeSimulation()
+
         // Save final results
         saveToHistory()
     }
@@ -192,6 +198,7 @@ final class QueryViewModel: ObservableObject {
         claudeResult = .loading(for: .claude)
         geminiResult = .loading(for: .gemini)
         appleResult = .loading
+        simulationVM.reset()
 
         showResults = true
         
@@ -208,7 +215,10 @@ final class QueryViewModel: ObservableObject {
         await runAppleSynthesis()
 
         phase = .complete
-        
+
+        // Initialize ingredient simulation
+        initializeSimulation()
+
         // Stage 3: Save final results to history
         saveToHistory()
     }
@@ -483,6 +493,21 @@ final class QueryViewModel: ObservableObject {
         }
     }
     
+    private func initializeSimulation() {
+        let primary = claudeResult.isLoading ? nil : claudeResult
+        let gemini = geminiResult.isLoading ? nil : geminiResult
+        let synthesis = appleResult.isLoading ? nil : appleResult
+        simulationVM.initialize(
+            primaryResult: primary,
+            geminiResult: gemini,
+            synthesisResult: synthesis,
+            baselineProb: appleResult.isLoading ? 0 : appleResult.finalIBSProbability,
+            query: resolvedQuery,
+            userProfile: userProfile,
+            userSources: userSources
+        )
+    }
+
     private func saveToHistory() {
         guard let record = currentQueryRecord else { return }
         guard let context = modelContext else { return }

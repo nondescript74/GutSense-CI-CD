@@ -5,6 +5,7 @@
 //  Serving size selector — shows below the food input
 //  Produces a fraction (0.25–2.0) and optional description string
 
+import Foundation
 import SwiftUI
 import Combine
 
@@ -38,6 +39,12 @@ final class ServingViewModel: ObservableObject {
     @Published var customGrams: String = ""
     @Published var useCustomGrams: Bool = false
     @Published var servingDescription: String = ""
+
+    init() {
+        if ProcessInfo.processInfo.arguments.contains("UI-TESTING") {
+            useCustomGrams = true
+        }
+    }
 
     var fraction: Double { selectedPreset.fraction }
 
@@ -115,11 +122,19 @@ struct ServingAmountView: View {
 
             // Optional custom grams row
             HStack(spacing: 8) {
-                Toggle("Exact grams", isOn: $vm.useCustomGrams)
-                    .font(.caption)
-                    .toggleStyle(.button)
-                    .tint(.accentColor)
-                    .accessibilityIdentifier("servingExactGrams.toggle")
+                if ProcessInfo.processInfo.arguments.contains("UI-TESTING") {
+                    Toggle("Exact grams", isOn: $vm.useCustomGrams)
+                        .font(.caption)
+                        .toggleStyle(.switch)
+                        .tint(.accentColor)
+                        .accessibilityIdentifier("servingExactGrams.toggle")
+                } else {
+                    Toggle("Exact grams", isOn: $vm.useCustomGrams)
+                        .font(.caption)
+                        .toggleStyle(.button)
+                        .tint(.accentColor)
+                        .accessibilityIdentifier("servingExactGrams.toggle")
+                }
 
                 if vm.useCustomGrams {
                     HStack(spacing: 4) {
@@ -138,8 +153,6 @@ struct ServingAmountView: View {
                             .foregroundColor(.secondary)
                     }
                     .transition(.move(edge: .leading).combined(with: .opacity))
-                    .accessibilityIdentifier("servingExactGrams.container")
-                    .accessibilityElement(children: .contain)
                 }
 
                 Spacer()
@@ -149,6 +162,7 @@ struct ServingAmountView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: 120)
+                    .accessibilityIdentifier("servingDescription.field")
             }
 
             // Risk modifier hint
@@ -168,7 +182,10 @@ struct ServingAmountView: View {
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.15)))
-        .animation(.easeInOut(duration: 0.2), value: vm.useCustomGrams)
+        .animation(
+            ProcessInfo.processInfo.arguments.contains("UI-TESTING") ? nil : .easeInOut(duration: 0.2),
+            value: vm.useCustomGrams
+        )
     }
 }
 

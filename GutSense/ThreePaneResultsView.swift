@@ -866,8 +866,10 @@ struct ThreePaneResultsView: View {
     var productName: String? = nil
     var productImage: UIImage? = nil
     var barcodeValue: String? = nil
+    var userProfile: UserProfile = UserProfile()
     @ObservedObject var appleService: AppleFoundationModelService
-    
+    @ObservedObject var simulationVM: SimulationViewModel
+
     @State private var showFeedback = false
     
     // Calculate total weight from reconciled ingredients
@@ -1040,6 +1042,17 @@ struct ThreePaneResultsView: View {
                     }
                     .padding(.top, 8)
 
+                    // Ingredient Simulation Panel
+                    if !simulationVM.ingredients.isEmpty {
+                        IngredientSimulationPanel(
+                            viewModel: simulationVM,
+                            originalQuery: query,
+                            primaryResult: claudeResult,
+                            geminiResult: geminiResult,
+                            userProfile: userProfile
+                        )
+                    }
+
                     // Bottom row: Claude | Gemini (primary analyses)
                     GeometryReader { geo in
                         HStack(alignment: .top, spacing: 10) {
@@ -1091,7 +1104,8 @@ struct ClearBackgroundView: UIViewRepresentable {
             geminiResult: .geminiMock,
             appleResult: .appleSynthesisMock,
             servingInfo: "1× serving (100%)",
-            appleService: AppleFoundationModelService.shared
+            appleService: AppleFoundationModelService.shared,
+            simulationVM: SimulationViewModel()
         )
     }
 }

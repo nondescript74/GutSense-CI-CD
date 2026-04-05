@@ -194,7 +194,8 @@ struct StrongGutClipView: View {
                         productName: nil,
                         productImage: nil,
                         barcodeValue: nil,
-                        appleService: AppleFoundationModelService.shared
+                        appleService: AppleFoundationModelService.shared,
+                        simulationVM: queryViewModel.simulationVM
                     )
                 } else {
                     VStack(spacing: 16) {

@@ -50,16 +50,13 @@ struct QueryHistoryView: View {
                     if let claude = record.loadClaudeResult(),
                        let gemini = record.loadGeminiResult(),
                        let apple = record.loadAppleResult() {
-                        ThreePaneResultsView(
+                        HistoryResultsWrapper(
                             query: record.queryText,
                             claudeResult: claude,
                             geminiResult: gemini,
                             appleResult: apple,
-                            servingInfo: record.servingInfo,
-                            appleService: AppleFoundationModelService.shared
+                            servingInfo: record.servingInfo
                         )
-                        .navigationTitle("Saved Analysis")
-                        .navigationBarTitleDisplayMode(.inline)
                     } else {
                         Text("Unable to load saved results")
                     }
@@ -161,6 +158,40 @@ struct QueryHistoryView: View {
         // This would require tab selection binding from ContentView
     }
 }
+
+// MARK: - History Results Wrapper (owns a SimulationViewModel for saved analyses)
+
+struct HistoryResultsWrapper: View {
+    let query: String
+    let claudeResult: AgentResult
+    let geminiResult: AgentResult
+    let appleResult: SynthesisResult
+    let servingInfo: String?
+
+    @StateObject private var simulationVM = SimulationViewModel()
+
+    var body: some View {
+        ThreePaneResultsView(
+            query: query,
+            claudeResult: claudeResult,
+            geminiResult: geminiResult,
+            appleResult: appleResult,
+            servingInfo: servingInfo,
+            appleService: AppleFoundationModelService.shared,
+            simulationVM: simulationVM
+        )
+        .navigationTitle("Saved Analysis")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            simulationVM.initialize(
+                primaryResult: claudeResult,
+                geminiResult: geminiResult,
+                baselineProb: appleResult.finalIBSProbability
+            )
+        }
+    }
+}
+
 // MARK: - Incomplete Analysis View
 
 struct IncompleteAnalysisView: View {
