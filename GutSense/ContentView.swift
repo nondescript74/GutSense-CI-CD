@@ -39,6 +39,10 @@ struct ContentView: View {
                         .environmentObject(queryViewModel)
                 }
 
+                Tab("Recipes", systemImage: "book.fill") {
+                    RecipeTabView(userProfile: resolvedProfile)
+                }
+
                 Tab("Sources", systemImage: "books.vertical.fill") {
                     SourceLibraryView()
                 }

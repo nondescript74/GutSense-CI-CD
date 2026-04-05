@@ -546,6 +546,108 @@ final class BackendAPIService: ObservableObject {
     }
 #endif
 
+    // MARK: - Recipe API
+
+    func extractRecipe(url: String) async throws -> RecipeExtractResult {
+        // Fetch HTML client-side (real device bypasses bot detection)
+        let html = await fetchHTMLClientSide(url: url)
+        let dto = RecipeExtractRequestDTO(url: url, html: html)
+        let r: RecipeExtractResultDTO = try await post(path: "/recipe/extract", body: dto)
+        return r.toDomain()
+    }
+
+    func extractFullRecipe(url: String, pageHash: String) async throws -> RecipeFullDetails {
+        let html = await fetchHTMLClientSide(url: url)
+        let dto = RecipeFullExtractRequestDTO(url: url, page_hash: pageHash, html: html)
+        let r: RecipeFullExtractResultDTO = try await post(path: "/recipe/extract-full", body: dto)
+        return r.toDomain()
+    }
+
+    /// Fetch HTML from a URL using the device's URLSession (bypasses Cloudflare bot detection).
+    private func fetchHTMLClientSide(url: String) async -> String? {
+        guard let pageURL = URL(string: url) else { return nil }
+        var request = URLRequest(url: pageURL)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else { return nil }
+            return String(data: data, encoding: .utf8)
+        } catch {
+            print("Client-side HTML fetch failed: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    func saveRecipe(_ req: RecipeSaveRequestDTO) async throws -> String {
+        let r: RecipeSaveResponseDTO = try await post(path: "/recipe/save", body: req)
+        return r.id
+    }
+
+    func listRecipes() async throws -> [SavedRecipe] {
+        let r: RecipeListResponseDTO = try await get(path: "/recipe/list")
+        return r.recipes.map { $0.toDomain() }
+    }
+
+    func deleteRecipe(id: String) async throws {
+        let _: [String: String] = try await delete(path: "/recipe/\(id)")
+    }
+
+    // MARK: - Generic GET
+
+    private func get<Res: Decodable>(path: String) async throws -> Res {
+        guard let base = keychain.read(forKey: "gutsense.backend_url") else {
+            throw BackendAPIError.missingCredentials("GutSense Backend URL")
+        }
+        let clean = base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard let url = URL(string: clean + path) else { throw BackendAPIError.invalidURL }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        if let secret = keychain.read(forKey: "gutsense.api_secret") {
+            req.setValue("Bearer \(secret)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response): (Data, URLResponse)
+        do { (data, response) = try await session.data(for: req) }
+        catch { throw BackendAPIError.networkError(error) }
+
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw BackendAPIError.httpError(http.statusCode,
+                String(data: data, encoding: .utf8) ?? "Unknown error")
+        }
+        do { return try JSONDecoder().decode(Res.self, from: data) }
+        catch { throw BackendAPIError.decodingError(error) }
+    }
+
+    // MARK: - Generic DELETE
+
+    private func delete<Res: Decodable>(path: String) async throws -> Res {
+        guard let base = keychain.read(forKey: "gutsense.backend_url") else {
+            throw BackendAPIError.missingCredentials("GutSense Backend URL")
+        }
+        let clean = base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard let url = URL(string: clean + path) else { throw BackendAPIError.invalidURL }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        if let secret = keychain.read(forKey: "gutsense.api_secret") {
+            req.setValue("Bearer \(secret)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response): (Data, URLResponse)
+        do { (data, response) = try await session.data(for: req) }
+        catch { throw BackendAPIError.networkError(error) }
+
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw BackendAPIError.httpError(http.statusCode,
+                String(data: data, encoding: .utf8) ?? "Unknown error")
+        }
+        do { return try JSONDecoder().decode(Res.self, from: data) }
+        catch { throw BackendAPIError.decodingError(error) }
+    }
+
     // MARK: - DTO Builder
 
     private func makeDTO(query: String, profile: UserProfile, sources: [UserSource],
