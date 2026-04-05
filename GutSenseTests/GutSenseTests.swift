@@ -259,7 +259,7 @@ struct BackendAPIServiceTests {
         let vm = ServingViewModel()
         
         // Act
-        vm.useCustomGrams = true
+        vm.useCustomGrams = false
         vm.customGrams = "50"
         
         // Assert
