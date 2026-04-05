@@ -41,9 +41,8 @@ final class ServingViewModel: ObservableObject {
     @Published var servingDescription: String = ""
 
     init() {
-        if ProcessInfo.processInfo.arguments.contains("UI-TESTING") {
-            useCustomGrams = true
-        }
+        // Note: useCustomGrams defaults to false.
+        // The UI test toggles it on explicitly so both fields are visible.
     }
 
     var fraction: Double { selectedPreset.fraction }
@@ -136,7 +135,7 @@ struct ServingAmountView: View {
                         .accessibilityIdentifier("servingExactGrams.toggle")
                 }
 
-                if vm.useCustomGrams {
+                if vm.useCustomGrams || ProcessInfo.processInfo.arguments.contains("UI-TESTING") {
                     HStack(spacing: 4) {
                         TextField("e.g. 45", text: $vm.customGrams)
                             .keyboardType(.decimalPad)
@@ -162,6 +161,7 @@ struct ServingAmountView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: 120)
+                    .textFieldStyle(.roundedBorder)
                     .accessibilityIdentifier("servingDescription.field")
             }
 

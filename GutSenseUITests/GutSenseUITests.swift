@@ -201,54 +201,45 @@ final class GutSenseUITests: XCTestCase {
         // Verify selection changed
     }
     
-//    @MainActor
-//    func testServingFieldIsolationProbe() throws {
-//        app.tabBars.buttons["Analyze"].tap()
-//
-//        let textView = app.textViews["queryInput.textEditor"]
-//        textView.tap()
-//        textView.typeText("Probe food")
-//        app.tap()
-//
-//        let exactToggle = app.buttons["servingExactGrams.toggle"].exists
-//            ? app.buttons["servingExactGrams.toggle"]
-//            : app.switches["servingExactGrams.toggle"]
-//        scrollToElement(exactToggle)
-//        if exactToggle.waitForExistence(timeout: 2) {
-//            exactToggle.tap()
-//        }
-//
-//        let textFields = app.descendants(matching: .textField)
-//        var lines: [String] = []
-//        for index in 0..<textFields.count {
-//            let field = textFields.element(boundBy: index)
-//            let id = field.identifier
-//            let placeholder = (field.placeholderValue ?? "")
-//            let value = String(describing: field.value ?? "")
-//            lines.append("#\(index) id=\(id) placeholder=\(placeholder) value=\(value)")
-//        }
-//        let attachment = XCTAttachment(string: lines.joined(separator: "\n"))
-//        attachment.name = "ServingFieldIsolation"
-//        attachment.lifetime = .keepAlways
-//        add(attachment)
-//
-//        let descriptionField = app.textFields.matching(identifier: "servingDescription.field").firstMatch
-//        if descriptionField.waitForExistence(timeout: 2) {
-//            scrollToElement(descriptionField)
-//            descriptionField.tap()
-//            if !app.keyboards.element.exists {
-//                let fieldCoord = descriptionField.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-//                fieldCoord.tap()
-//                descriptionField.doubleTap()
-//            }
-//            if app.keyboards.element.waitForExistence(timeout: 2) {
-//                descriptionField.typeText("two slices")
-//                XCTAssertEqual(descriptionField.value as? String, "two slices")
-//            }
-//        }
-//
-//        XCTAssertTrue(textFields.count >= 2)
-//    }
+    @MainActor
+    func testServingFieldIsolationProbe() throws {
+        app.tabBars.buttons["Analyze"].tap()
+
+        let textView = app.textViews["queryInput.textEditor"]
+        textView.tap()
+        textView.typeText("Probe food")
+        app.tap()
+
+        let exactToggle = app.buttons["servingExactGrams.toggle"].exists
+            ? app.buttons["servingExactGrams.toggle"]
+            : app.switches["servingExactGrams.toggle"]
+        scrollToElement(exactToggle)
+        if exactToggle.waitForExistence(timeout: 2) {
+            exactToggle.tap()
+        }
+
+        let textFields = app.descendants(matching: .textField)
+        var lines: [String] = []
+        for index in 0..<textFields.count {
+            let field = textFields.element(boundBy: index)
+            let id = field.identifier
+            let placeholder = (field.placeholderValue ?? "")
+            let value = String(describing: field.value ?? "")
+            lines.append("#\(index) id=\(id) placeholder=\(placeholder) value=\(value)")
+        }
+        let attachment = XCTAttachment(string: lines.joined(separator: "\n"))
+        attachment.name = "ServingFieldIsolation"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
+        // Verify both fields are discoverable
+        let gramsField = app.textFields.matching(identifier: "servingExactGrams.field").firstMatch
+        let descriptionField = app.textFields.matching(identifier: "servingDescription.field").firstMatch
+        XCTAssertTrue(gramsField.waitForExistence(timeout: 3), "Exact-grams field should exist")
+        XCTAssertTrue(descriptionField.waitForExistence(timeout: 3), "Description field should exist")
+
+        XCTAssertTrue(textFields.count >= 2)
+    }
     
     // MARK: - Analyze Button Tests
     
